@@ -1,9 +1,23 @@
 class BinCompiler:
 
     @classmethod
-    def compile_to_uint():
+    def compile_to_uint(cls, value, n_output, n_radix):
         """ Compiles the passed value to an unsigned representation.
         """
+
+        scale_factor = 2 ** n_radix
+        scaled_val = int(value * scale_factor)
+
+        # Convert to string representation to allow explicit 
+        # formatting of the binary
+        bin_int = int("{0:032b}".format(scaled_val))
+        bin_str = str(bin_int)
+        
+        # Sign extend the output string
+        while len(bin_str) < n_output:
+            bin_str = "0" + bin_str
+            
+        return bin_str
 
     @classmethod
     def compile_to_signed():
