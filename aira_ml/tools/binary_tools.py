@@ -6,7 +6,7 @@ from rsa import sign
 class BinCompiler:
 
     @classmethod
-    def compile_to_uint(cls, value, n_output, n_radix, compile_to_signed=False):
+    def compile_to_uint(cls, value, n_output, n_radix):
         """ Compiles the passed value to an unsigned representation.
         """
 

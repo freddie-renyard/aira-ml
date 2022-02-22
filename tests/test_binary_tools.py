@@ -1,6 +1,5 @@
-import io
 from aira_ml.tools.binary_tools import BinCompiler
-from random import randint, uniform
+from random import randint
 import numpy as np
 
 def generate_rand_bits(bits, radix):
