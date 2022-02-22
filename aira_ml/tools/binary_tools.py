@@ -1,26 +1,22 @@
-from numpy import uint
-from sympy import N
-
+from distutils.log import warn
+from bitstring import BitArray
 
 class BinCompiler:
 
     @classmethod
-    def compile_to_uint(cls, value, n_output, n_radix):
+    def compile_to_uint(cls, value, n_output, n_radix, compile_to_signed=False):
         """ Compiles the passed value to an unsigned representation.
         """
 
         scale_factor = 2 ** n_radix
         scaled_val = int(abs(value) * scale_factor)
 
-        # Convert to string representation to allow explicit 
-        # formatting of the binary
-        bin_int = int("{0:032b}".format(scaled_val))
-        bin_str = str(bin_int)
-        
+        bin_str = str(BitArray(uint=scaled_val, length=n_output).bin)
+
         # Sign extend the output string
         while len(bin_str) < n_output:
             bin_str = "0" + bin_str
-            
+
         return bin_str
 
     @classmethod
@@ -28,11 +24,14 @@ class BinCompiler:
         """ Compiles the passed value to a binary two's complement number.
         """
 
-        uint_str = cls.compile_to_uint(value, (n_output-1), n_radix)
+        if n_output < 2:
+            raise TypeError("ERROR: n_output must be 2 bits or greater.")
+        if type(n_output) != int:
+            raise TypeError("ERROR: n_output must be an integer.")
+
+        uint_str = cls.compile_to_uint(value, (n_output-1), n_radix, compile_to_signed=True)
 
         if value < 0:
-
-            
 
             # Invert the binary string.
             flipped_str = ""
@@ -51,7 +50,7 @@ class BinCompiler:
             
             if len(flipped_str) > n_output:
                 flipped_str = flipped_str[0:n_output]
-                
+
             return flipped_str
         else:
             return "0" + uint_str
