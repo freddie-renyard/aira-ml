@@ -32,6 +32,8 @@ class BinCompiler:
 
         if value < 0:
 
+            
+
             # Invert the binary string.
             flipped_str = ""
             for bit in uint_str:
@@ -39,19 +41,17 @@ class BinCompiler:
                     flipped_str += "0"
                 elif bit == "0":
                     flipped_str += "1"
-            
+
+            # Sign extend the binary string.
+            while len(flipped_str) < n_output:
+                flipped_str = "1" + flipped_str
+   
             add_one = int(flipped_str, 2) + 1
             flipped_str = str(int("{0:032b}".format(add_one)))
             
-            if len(flipped_str) < n_output:
-                
-                # Sign extend the binary string.
-                while len(flipped_str) < n_output:
-                    flipped_str = "1" + flipped_str
-
-            elif len(flipped_str) > n_output:
+            if len(flipped_str) > n_output:
                 flipped_str = flipped_str[0:n_output]
-
+                
             return flipped_str
         else:
             return "0" + uint_str
