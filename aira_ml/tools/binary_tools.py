@@ -1,6 +1,7 @@
 from distutils.log import warn
 from bitstring import BitArray
 from numpy import expand_dims
+from rsa import sign
 
 class BinCompiler:
 
@@ -10,7 +11,7 @@ class BinCompiler:
         """
 
         scale_factor = 2 ** n_radix
-        scaled_val = int(abs(value) * scale_factor)
+        scaled_val = round(abs(value) * scale_factor)
 
         bin_str = str(BitArray(uint=scaled_val, length=n_output).bin)
 
@@ -65,18 +66,21 @@ class BinCompiler:
         signed_exp = 0
 
         max_mantissa_val = 1 - 1.0 / ((2 ** n_full_mantissa)-1)
+        max_abs_exp = 2 ** (n_exponent-1) - 1
 
         if norm_val < 0.5:
-            while norm_val < 0.5:
-                norm_val *= 2
-                signed_exp -= 1
+            if norm_val == 0.0:
+                norm_val = 0.0
+                signed_exp = -max_abs_exp - 1
+            else:
+                while norm_val < 0.5:
+                    norm_val *= 2
+                    signed_exp -= 1
         else:
-            while norm_val > max_mantissa_val:
+            while norm_val > max_mantissa_val: 
                 norm_val /= 2
                 signed_exp += 1
-        
-        max_abs_exp = 2 ** (n_exponent-1) - 1
-        
+
         if abs(signed_exp) > max_abs_exp:
             if value >= max_mantissa_val:
                 # Clip the value to the maximum positive number
@@ -92,6 +96,11 @@ class BinCompiler:
         offset_exp = signed_exp + offset
 
         exp_bin = cls.compile_to_uint(offset_exp, n_exponent, 0)
+        
+        # Set the mantissa to zero if exponent represents zero.
+        # Unnecessary for hardware, but makes unit tests easier
+        if offset_exp == 0:
+            norm_val = 0.0
         
         # Compile the mantissa to binary
         mantissa_bin = cls.compile_to_uint(norm_val, n_full_mantissa, n_full_mantissa)
