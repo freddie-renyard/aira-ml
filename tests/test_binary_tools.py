@@ -8,3 +8,7 @@ def test_unsigned():
     assert BinCompiler.compile_to_uint(15.0, 8, 4) == "11110000"
     assert BinCompiler.compile_to_uint(85, 7, 0) == "1010101"
     assert BinCompiler.compile_to_uint(0.0000001, 4, 4) == "0000"
+    assert BinCompiler.compile_to_uint(0.1, 1, 1) == "0"
+
+def test_signed():
+    assert BinCompiler.compile_to_signed(-1,8,0) == "11111111"
