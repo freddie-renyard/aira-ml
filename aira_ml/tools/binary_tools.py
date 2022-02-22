@@ -1,5 +1,6 @@
 from distutils.log import warn
 from bitstring import BitArray
+from numpy import expand_dims
 
 class BinCompiler:
 
@@ -32,7 +33,7 @@ class BinCompiler:
         return bin_str
 
     @classmethod
-    def compile_to_float():
+    def compile_to_float(cls, value, n_mantissa, n_exponent):
         """ Compiles the passed value to a custom floating point representation, 
         according to the following protocol:
 
@@ -52,3 +53,50 @@ class BinCompiler:
         permitted. 
             - Negative and positive zero are equivalent.
         """
+
+        if value < 0:
+            sign_bit = "1"
+        else:
+            sign_bit = "0"
+
+        n_full_mantissa = n_mantissa + 1 # Add on the vestigial bit
+
+        norm_val = abs(value)
+        signed_exp = 0
+
+        max_mantissa_val = 1 - 1.0 / ((2 ** n_full_mantissa)-1)
+
+        if norm_val < 0.5:
+            while norm_val < 0.5:
+                norm_val *= 2
+                signed_exp -= 1
+        else:
+            while norm_val > max_mantissa_val:
+                norm_val /= 2
+                signed_exp += 1
+        
+        max_abs_exp = 2 ** (n_exponent-1) - 1
+        
+        if abs(signed_exp) > max_abs_exp:
+            if value >= max_mantissa_val:
+                # Clip the value to the maximum positive number
+                signed_exp = max_abs_exp
+                norm_val = max_mantissa_val
+            else:
+                # Clip to zero
+                signed_exp = -max_abs_exp - 1
+                norm_val = 0.0
+
+        # Compile exponent to binary
+        offset = max_abs_exp + 1
+        offset_exp = signed_exp + offset
+
+        exp_bin = cls.compile_to_uint(offset_exp, n_exponent, 0)
+        
+        # Compile the mantissa to binary
+        mantissa_bin = cls.compile_to_uint(norm_val, n_full_mantissa, n_full_mantissa)
+
+        # Clip the vestigial bit off
+        mantissa_bin = mantissa_bin[1:]
+    
+        return sign_bit + exp_bin + mantissa_bin
