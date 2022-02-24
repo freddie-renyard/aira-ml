@@ -14,30 +14,6 @@ def generate_rand_bits(bits, radix):
         out_num = int(out_str, 2)
 
     return out_str, out_num / (2 ** radix)
-
-def decode_custom_float(bin_str, n_mantissa, n_exp):
-    
-    sign_str = bin_str[0]
-    exp_str = bin_str[1:1+n_exp]
-    mantissa_str = "1" + bin_str[1+n_exp:]
-
-    # Convert mantissa to decimal and convert to fixed representation
-    mantissa = int(mantissa_str, 2) / (2 ** (n_mantissa+1))
-
-    # Convert exponent to decimal
-    exponent = int(exp_str, 2) 
-    
-    if exponent == 0.0:
-        return 0.0
-
-    # Remove exponent offset.
-    exponent -= (2 ** (n_exp-1))
-
-    # Sign the mantissa
-    if sign_str == "1":
-        mantissa *= -1
-
-    return mantissa * (2 ** exponent)
     
 def test_unsigned():
     assert BinCompiler.compile_to_uint(0.5, 3, 3) == "100"
@@ -74,7 +50,7 @@ def test_floats():
 
     for val in test_vals:
         out_str = BinCompiler.compile_to_float(val,4,4)
-        out_decoded = decode_custom_float(out_str,4,4)
+        out_decoded = BinCompiler.decode_custom_float(out_str,4,4)
 
         norm_error = abs(out_decoded - val) / out_decoded
 
