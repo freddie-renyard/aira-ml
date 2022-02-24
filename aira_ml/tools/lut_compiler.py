@@ -4,7 +4,7 @@ from math import exp, ceil, log2
 class LUTCompiler:
 
     @classmethod
-    def compile_sigmoid(cls, n_mantissa_in, n_exp_in):
+    def compile_sigmoid(cls, n_mantissa_in, n_exp_in, n_output):
         """ Compile an lookup table for a sigmoid function with
         floating point inputs and unsigned fixed point outputs.
 
@@ -26,3 +26,10 @@ class LUTCompiler:
         # Determine what value this binary actually represents under 
         # floating point interpretation.
         in_float_vals = [BinCompiler.decode_custom_float(x, n_mantissa_in, n_exp_in) for x in in_bin_str]
+
+        # Compute the sigmoid value for each value.
+        out_sigmoid_vals = [sigmoid(x) for x in in_float_vals]
+
+        out_bin = [BinCompiler.compile_to_uint(x, n_output, n_output) for x in out_sigmoid_vals] 
+
+        return out_bin
