@@ -1,6 +1,7 @@
 import tensorflow as tf
 import numpy as np
 from matplotlib import pyplot as plt
+from aira_ml.tools.matrix_tools import MatrixTools
 
 class ModelCompiler:
 
@@ -26,6 +27,13 @@ class ModelCompiler:
         Aira object.
         """
 
+        weights, biases = layer.get_weights()
+
+        weights = MatrixTools.sparsify_matrix_simple(weights, 0.9, verbose=True)
+
+        MatrixTools.plot_histogram(weights, bins=300)
+
+    @classmethod
     def extract_flatten(cls, layer, index):
         """This method extracts relevant data from a Flatten layer.
         This method will be utilised when integrating aira-ml into 
