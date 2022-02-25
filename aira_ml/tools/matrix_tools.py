@@ -44,12 +44,13 @@ class MatrixTools:
 
         while abs(current_density - density) > sparse_error:
             
+            # TODO Optimise this algorithm.
             if current_density < density:
-                threshold = threshold + 1
+                threshold *= 0.6
             else:
-                threshold = threshold - 1
+                threshold *= 1.4
 
-            bin_matrix = (np.abs(matrix) > 1/threshold)
+            bin_matrix = (np.abs(matrix) > threshold)
             current_density = np.sum(bin_matrix) / matrix_val_num
 
             if verbose:

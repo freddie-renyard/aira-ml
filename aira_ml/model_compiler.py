@@ -1,7 +1,9 @@
+from ctypes import BigEndianStructure
 import tensorflow as tf
 import numpy as np
 from matplotlib import pyplot as plt
 from aira_ml.tools.matrix_tools import MatrixTools
+from aira_ml.aira_objects import DenseAira
 
 class ModelCompiler:
 
@@ -29,9 +31,18 @@ class ModelCompiler:
 
         weights, biases = layer.get_weights()
 
-        weights = MatrixTools.sparsify_matrix_simple(weights, 0.9, verbose=True)
+        weights = MatrixTools.sparsify_matrix_simple(weights, density=0.5)
+        # MatrixTools.plot_histogram(weights)
 
-        MatrixTools.plot_histogram(weights, bins=300)
+        # Create the Aira Dense object, which will compile the data to
+        # the representations used in the FPGA.
+        dense_obj = DenseAira(
+            index=index,
+            weights = weights,
+            biases=biases,
+            act_name=layer.activation.__qualname__
+        )
+
 
     @classmethod
     def extract_flatten(cls, layer, index):
