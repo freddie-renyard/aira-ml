@@ -109,7 +109,7 @@ class DenseAira:
         return comp_weights
 
     def compile_row_data(self, data, address):
-
+        
         comp_weight = BinCompiler.compile_to_float(
             data, 
             n_mantissa = self.n_data_mantissa,
