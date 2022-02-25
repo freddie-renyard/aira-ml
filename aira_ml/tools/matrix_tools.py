@@ -62,3 +62,20 @@ class MatrixTools:
 
         return np.array(matrix * bin_matrix, dtype=float)
 
+    @staticmethod
+    def threshold_matrix(matrix, threshold=0.01, verbose=False):
+        """Prune the matrix using a specified threshold.
+        """
+
+        bin_matrix = (np.abs(matrix) > threshold)
+
+        if verbose:
+            matrix_val_num = np.product(np.shape(matrix))
+            density = np.sum(bin_matrix) / matrix_val_num
+            
+            print("Matrix Density: {}".format(density))
+
+        return np.array(matrix * bin_matrix, dtype=float)
+        
+        
+

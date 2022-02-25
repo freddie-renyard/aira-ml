@@ -32,7 +32,7 @@ class ModelCompiler:
         weights, biases = layer.get_weights()
 
         weights = MatrixTools.sparsify_matrix_simple(weights, density=0.5)
-        # MatrixTools.plot_histogram(weights)
+        #MatrixTools.plot_histogram(weights)
 
         # Create the Aira Dense object, which will compile the data to
         # the representations used in the FPGA.
