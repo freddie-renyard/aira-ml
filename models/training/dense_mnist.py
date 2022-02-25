@@ -14,8 +14,11 @@ x_test = x_test.astype("float32") / 255.0
 model = tf.keras.models.Sequential([
   tf.keras.layers.Flatten(input_shape=(28, 28)),
   tf.keras.layers.Dense(128, activation='relu'),
-  tf.keras.layers.Dense(10)
+  tf.keras.layers.Dense(10, activation='relu')
 ])
+
+model.summary()
+
 model.compile(
     optimizer=tf.keras.optimizers.Adam(0.001),
     loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
@@ -29,3 +32,5 @@ model.fit(
     epochs=6,
     validation_split=0.1
 )
+
+model.save('models/dense_mnist.h5')
