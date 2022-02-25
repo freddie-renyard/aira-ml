@@ -1,6 +1,8 @@
+from tabnanny import verbose
 import numpy as np
 from aira_ml.tools.aira_exceptions import AiraException
 from aira_ml.tools.binary_tools import BinCompiler
+from aira_ml.tools.file_tools import Filetools
 from math import ceil, log2
 
 class DenseAira:
@@ -32,9 +34,15 @@ class DenseAira:
         # Compile the weights and biases.
         self.comp_weights = self.compile_mem(weights, biases, compile_delta=True)
 
+        Filetools.save_to_file(
+            "dense_weights_{}".format(index), 
+            self.comp_weights, 
+            verbose=False
+        )
+
     def compile_mem(self, weights, biases, compile_delta=False):
         """Compile binary strings to be saved/transferred to the FPGA.
-        Also allows for delta encoded addressing when this hardware functionality is added.
+        The addresses are delta encoded:
         """
 
         weights = np.transpose(weights)

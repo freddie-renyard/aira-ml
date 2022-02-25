@@ -3,7 +3,7 @@ import os
 class Filetools:
 
     @classmethod
-    def save_to_file(cls, filename, target_list):
+    def save_to_file(cls, filename, target_list, verbose=True):
         """ Saves a specified list to a .mem file in the cache with entry comments.
         
         Parameters
@@ -19,7 +19,8 @@ class Filetools:
         file = open(path, "w")
 
         for i, element in enumerate(target_list):
-            file.write("//" + "Entry " + str(i) + '\n')
+            if verbose:
+                file.write("//" + "Entry " + str(i) + '\n')
             file.write(element + " " + '\n')
 
     @staticmethod
