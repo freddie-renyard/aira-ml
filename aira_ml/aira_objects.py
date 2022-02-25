@@ -23,8 +23,18 @@ class DenseAira:
         # Check that the weights are stored in a valid way.
         if np.shape(weight_dims)[0] != 2:
             raise AiraException("The weights for Dense layer {} are not stored in a 2D tensor.".format(index))
-            
-        # Compile the weights and biases.
 
+        # Compile the weights and biases.
+        self.comp_weights = []
+
+        weights = np.transpose(weights)
         
+        for row in weights:
+
+            nonzero_indices = np.nonzero(row)
+
+            for data_i in np.squeeze(nonzero_indices):
+                data_weight = row[data_i]
+
+
         
