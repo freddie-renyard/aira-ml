@@ -33,4 +33,4 @@ model.fit(
     validation_split=0.1
 )
 
-model.save('models/dense_mnist.h5')
+model.save('models/dense_mnist/model')

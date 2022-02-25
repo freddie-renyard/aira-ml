@@ -6,5 +6,7 @@ class ModelCompiler:
 
     @classmethod
     def compile_tf_model(cls, path_to_model):
-        """Compiles a TensorFlow model to the current supported Aira objects
+        """Compiles a TensorFlow model to the current supported Aira objects.
         """
+
+        
