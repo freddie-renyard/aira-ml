@@ -31,7 +31,7 @@ class ModelCompiler:
         weights, biases = layer.get_weights()
 
         weights = MatrixTools.sparsify_matrix_simple(weights, density=0.5)
-        MatrixTools.plot_histogram(weights)
+        #MatrixTools.plot_histogram(weights)
         
         # Create the Aira Dense object, which will compile the data to
         # the representations used in the FPGA.
@@ -41,7 +41,15 @@ class ModelCompiler:
             biases          = biases, 
             act_name        = layer.activation.__qualname__,
             n_data_mantissa = 3,
-            n_data_exponent = 3
+            n_data_exponent = 3,
+            n_input_mantissa= 3,
+            n_input_exponent= 3,
+            n_weight_mantissa= 3,
+            n_weight_exponent= 3,
+            n_output_mantissa= 3,
+            n_output_exponent= 4,
+            n_overflow       = 1,
+            mult_extra       = 1
         )
 
     @classmethod

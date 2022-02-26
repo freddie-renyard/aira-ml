@@ -7,7 +7,12 @@ from math import ceil, log2
 
 class DenseAira:
 
-    def __init__(self, index, weights, biases, act_name, n_data_mantissa, n_data_exponent):
+    def __init__(self, index, weights, biases, act_name, 
+        n_input_mantissa, n_input_exponent,
+        n_weight_mantissa, n_weight_exponent,
+        n_output_mantissa, n_output_exponent,
+        n_overflow, mult_extra,
+        n_data_mantissa, n_data_exponent):
         
         self.index = index
 
@@ -15,7 +20,7 @@ class DenseAira:
         # hardware support.
         self.act_name = None
         if act_name == 'relu':
-            self.act_ = act_name
+            self.act_name = act_name
         else:
             raise AiraException("Unsupported function found in a Dense layer: {}".format(act_name))
 
@@ -26,6 +31,19 @@ class DenseAira:
 
         self.n_data_mantissa = n_data_mantissa
         self.n_data_exponent = n_data_exponent
+
+        self.n_input_mantissa = n_input_mantissa
+        self.n_input_exponent = n_input_exponent
+
+        self.n_weight_mantissa = n_weight_mantissa
+        self.n_weight_exponent = n_weight_exponent
+
+        self.n_output_mantissa = n_output_mantissa
+        self.n_output_exponent = n_output_exponent
+
+        # Multiplier optimisation parameters - control of internal datapaths
+        self.n_overflow = n_overflow
+        self.mult_extra = mult_extra
 
         # Check that the weights are stored in a valid way.
         if np.shape(weight_dims)[0] != 2:
@@ -39,6 +57,8 @@ class DenseAira:
             self.comp_weights, 
             verbose=False
         )
+
+        self.compile_verilog_header()
 
     def compile_mem(self, weights, biases, compile_delta=False):
         """Compile binary strings to be saved/transferred to the FPGA.
@@ -109,7 +129,7 @@ class DenseAira:
         return comp_weights
 
     def compile_row_data(self, data, address):
-        
+
         comp_weight = BinCompiler.compile_to_float(
             data, 
             n_mantissa = self.n_data_mantissa,
@@ -123,3 +143,43 @@ class DenseAira:
         )
 
         return comp_weight + comp_addr
+
+    def compile_verilog_header(self):
+        """Compile the parameters for the model into the Verilog header.
+        """
+
+        output_str = open("aira_ml/sv_source/header_source/dense_header.sv").read()
+
+        # Replace the markup with the parameters
+        output_str = output_str.replace("<pre_neurons>", str(self.pre_neuron_num))
+        output_str = output_str.replace("<post_neurons>", str(self.post_neuron_num))
+
+        output_str = output_str.replace("<n_man_input>", str(self.n_input_mantissa))
+        output_str = output_str.replace("<n_exp_input>", str(self.n_input_exponent))
+
+        output_str = output_str.replace("<n_man_weight>", str(self.n_weight_mantissa))
+        output_str = output_str.replace("<n_exp_weight>", str(self.n_weight_exponent))
+
+        output_str = output_str.replace("<n_man_out>", str(self.n_output_mantissa))
+        output_str = output_str.replace("<n_exp_out>", str(self.n_output_exponent))
+
+        output_str = output_str.replace("<n_overflow>", str(self.n_overflow))
+        output_str = output_str.replace("<mult_extra>", str(self.mult_extra))
+
+        mem_depth = len(self.comp_weights)
+        output_str = output_str.replace("<mem_depth>", str(mem_depth))
+        output_str = output_str.replace("<n_delta>", str(self.n_pre_addr))
+
+        if self.act_name == 'relu':
+            act_code = "1"
+        else:
+            act_code = "0"
+        
+        output_str = output_str.replace("<act_code>", act_code)
+
+        output_str = output_str.replace("<index>", str(self.index))
+
+        print(output_str)
+        exit()
+
+
