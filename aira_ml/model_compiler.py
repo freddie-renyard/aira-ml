@@ -116,14 +116,47 @@ class ModelCompiler:
         for aira_obj in aira_sequential:
             aira_ml_top += aira_obj.compile_verilog_wires()
 
+        aira_ml_top += cls.compile_connections(aira_sequential)
+
         # Add module declarations to the Verilog
         for aira_obj in aira_sequential:
             aira_ml_top += aira_obj.compile_verilog_module()
 
-        # Terminate the aira_ml_toip module
+        # Terminate the aira_ml_top module
         aira_ml_top += "\nendmodule"
 
         with open("aira_ml/cache/aira_ml_top.sv", "w") as output_file:
             output_file.write(aira_ml_top)
 
+    @classmethod
+    def compile_connections(cls, aira_sequential):
+        """Compiles the model's connection's into a list of assignments.
+        Returns the Verilog to be added to the aira_ml top file as a string.
+        """
+
+        connections_str = ""
+        
+        # Add input connection to the Verilog
+        obj_index = str(aira_sequential[0].index)
+        output_str = open("aira_ml/sv_source/input_connection.sv").read()
+        connections_str += output_str.replace("<i_post>", obj_index)
+
+        # Add intermediate connections to the Verilog
+        obj_num = len(aira_sequential)
+
+        for i in range(1, obj_num-1):
+            pre_index = str(aira_sequential[i-1].index)
+            post_index = str(aira_sequential[i].index)
+
+            output_str = open("aira_ml/sv_source/port_connection.sv").read()
+            output_str = output_str.replace("<i_pre>", pre_index)
+            connections_str += output_str.replace("<i_post>", post_index)
+
+        # Add output connection to the Verilog
+        obj_index = str(aira_sequential[-1].index)
+        output_str = open("aira_ml/sv_source/output_connection.sv").read()
+        connections_str += output_str.replace("<i_pre>", obj_index)
+
+        return connections_str
+    
 ModelCompiler.compile_tf_model("models/dense_mnist/model")
