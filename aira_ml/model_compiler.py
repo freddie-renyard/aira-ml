@@ -203,10 +203,5 @@ class ModelCompiler:
 
         with open("aira_ml/cache/serial_params.json", "w") as file:
             json.dump(json_dict, file)
-
-        
-
-
-
     
 ModelCompiler.compile_tf_model("models/dense_mnist/model")
