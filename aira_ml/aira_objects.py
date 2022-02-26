@@ -35,11 +35,15 @@ class DenseAira:
         self.n_input_mantissa = n_input_mantissa
         self.n_input_exponent = n_input_exponent
 
+        self.input_is_floating = (n_input_exponent != 0)
+
         self.n_weight_mantissa = n_weight_mantissa
         self.n_weight_exponent = n_weight_exponent
 
         self.n_output_mantissa = n_output_mantissa
         self.n_output_exponent = n_output_exponent
+
+        self.output_is_floating = (n_output_exponent != 0)
 
         # Multiplier optimisation parameters - control of internal datapaths
         self.n_overflow = n_overflow

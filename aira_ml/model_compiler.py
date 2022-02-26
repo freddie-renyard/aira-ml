@@ -23,16 +23,35 @@ class ModelCompiler:
             elif 'flatten' in layer.name:
                 cls.extract_flatten(layer, i)
         
-        verilog_header = open("aira_ml/cache/aira_params.vh", 'x')
+        verilog_header = open("aira_ml/sv_source/header_source/aira_params.vh").read()
+
+        # Compile the input data width
+        first_obj = aira_sequential[0]
+        if first_obj.input_is_floating:
+            in_width = 1 + first_obj.n_input_exponent + first_obj.n_input_mantissa
+        else:
+            in_width = first_obj.n_input_mantissa
+
+        # Compile the output data width
+        last_obj = aira_sequential[-1]
+        if last_obj.input_is_floating:
+            out_width = 1 + last_obj.n_output_exponent + last_obj.n_output_mantissa
+        else:
+            out_width = last_obj.n_output_mantissa
+
+        # Insert the data widths into the header file.
+        verilog_header = verilog_header.replace("<n_mod_in>", str(in_width))
+        verilog_header = verilog_header.replace("<n_mod_out>", str(out_width))
 
         # Loop over all the objects in the model.
         for aira_obj in aira_sequential:
 
             # Add the object's parameter declarations into 
             # the Verilog header.
-            verilog_header.write(aira_obj.compile_verilog_header())
+            verilog_header += aira_obj.compile_verilog_header()
 
-        verilog_header.close()
+        with open("aira_ml/cache/aira_params.vh", 'w') as output_file:
+            output_file.write(verilog_header)
 
     @classmethod
     def extract_dense(cls, layer, index):
