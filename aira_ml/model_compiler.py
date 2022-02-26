@@ -40,6 +40,13 @@ class ModelCompiler:
 
         cls.compile_system_verilog(aira_sequential)
 
+        cls.compile_serial_params(
+            n_input     = aira_sequential[0].n_input,
+            n_output    = aira_sequential[-1].n_output,
+            input_num   = aira_sequential[0].pre_neuron_num,
+            output_num  = aira_sequential[-1].post_neuron_num
+        )
+
     @classmethod
     def extract_dense(cls, layer, index, n_in_mantissa, n_in_exponent):
         """This method compiles the data in a dense layer to a Dense
@@ -179,10 +186,26 @@ class ModelCompiler:
         return connections_str
 
     @staticmethod
-    def compile_serial_params():
+    def compile_serial_params(n_input, n_output, input_num, output_num):
         """Compiles the parameters needed to run the serial interface.
         Nothing is returned; a JSON file is saved to the cache.
         """
+
+        json_dict = {}
+
+        # Save the bit depths of the input and output.
+        json_dict["input_bit_depth"] = n_input
+        json_dict["output_bit_depth"] = n_output
+
+        # Save the number of entries to send and receive from the interface.
+        json_dict["input_number"] = input_num
+        json_dict["output_number"] = output_num
+
+        with open("aira_ml/cache/serial_params.json", "w") as file:
+            json.dump(json_dict, file)
+
+        
+
 
 
     
