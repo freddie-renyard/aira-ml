@@ -4,6 +4,8 @@ from matplotlib import pyplot as plt
 from aira_ml.tools.matrix_tools import MatrixTools
 from aira_ml.aira_objects import DenseAira
 import json
+import os
+from subprocess import check_call
 
 class ModelCompiler:
 
@@ -46,6 +48,8 @@ class ModelCompiler:
             input_num   = aira_sequential[0].pre_neuron_num,
             output_num  = aira_sequential[-1].post_neuron_num
         )
+
+        cls.call_synthesis_server()
 
     @classmethod
     def extract_dense(cls, layer, index, n_in_mantissa, n_in_exponent):
@@ -203,5 +207,23 @@ class ModelCompiler:
 
         with open("aira_ml/cache/serial_params.json", "w") as file:
             json.dump(json_dict, file)
+
+    @staticmethod
+    def call_synthesis_server():
+        """Transfers the contents of the cache to the synthesis server.
+        """
+
+        with open("aira_ml/config/server_config.json") as file:
+            server_config = json.load(file)
+
+        cwd = os.getcwd()
+
+        server_path = server_config["project_dir"]
+        server_addr = server_config["ssh_addr"]
+        vivado_loc = server_config["vivado_loc"]
+        project_path = server_config["project_loc"]
+        script_path = cwd + "/aira_ml/tools/shell_scripts/file_transfer.sh {} {} {} {}"
+
+        check_call(script_path.format(server_path, server_addr, vivado_loc, project_path), shell=True)
     
 ModelCompiler.compile_tf_model("models/dense_mnist/model")
