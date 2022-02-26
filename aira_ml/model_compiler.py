@@ -15,12 +15,24 @@ class ModelCompiler:
         model = tf.keras.models.load_model(path_to_model)
         model.summary()
 
+        aira_sequential = []
         for i, layer in enumerate(model.layers):
 
             if 'dense' in layer.name:
-                cls.extract_dense(layer, i)
+                aira_sequential.append(cls.extract_dense(layer, i))
             elif 'flatten' in layer.name:
                 cls.extract_flatten(layer, i)
+        
+        verilog_header = open("aira_ml/cache/aira_params.vh", 'x')
+
+        # Loop over all the objects in the model.
+        for aira_obj in aira_sequential:
+
+            # Add the object's parameter declarations into 
+            # the Verilog header.
+            verilog_header.write(aira_obj.compile_verilog_header())
+
+        verilog_header.close()
 
     @classmethod
     def extract_dense(cls, layer, index):
@@ -51,6 +63,8 @@ class ModelCompiler:
             n_overflow       = 1,
             mult_extra       = 1
         )
+
+        return dense_obj
 
     @classmethod
     def extract_flatten(cls, layer, index):
