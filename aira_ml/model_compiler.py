@@ -3,6 +3,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 from aira_ml.tools.matrix_tools import MatrixTools
 from aira_ml.aira_objects import DenseAira
+import json
 
 class ModelCompiler:
 
@@ -16,19 +17,32 @@ class ModelCompiler:
         model.summary()
 
         aira_sequential = []
-        for i, layer in enumerate(model.layers):
+
+        # Get the compiler parameters
+        with open("aira_ml/config/compiler_config.json") as file:
+            params = json.load(file)
+
+        prev_man = params["starting_mantissa"]
+        prev_exp = params["starting_exponent"]
+
+        index = 0
+        for layer in model.layers:
 
             if 'dense' in layer.name:
-                aira_sequential.append(cls.extract_dense(layer, i))
+
+                dense_obj, prev_man, prev_exp = cls.extract_dense(layer, index, prev_man, prev_exp)
+                aira_sequential.append(dense_obj)
+
+                index += 1
             elif 'flatten' in layer.name:
-                cls.extract_flatten(layer, i)
+                cls.extract_flatten(layer)
         
         cls.compile_full_header(aira_sequential)
 
         cls.compile_system_verilog(aira_sequential)
 
     @classmethod
-    def extract_dense(cls, layer, index):
+    def extract_dense(cls, layer, index, n_in_mantissa, n_in_exponent):
         """This method compiles the data in a dense layer to a Dense
         Aira object.
         """
@@ -37,6 +51,14 @@ class ModelCompiler:
 
         weights = MatrixTools.sparsify_matrix_simple(weights, density=0.5)
         #MatrixTools.plot_histogram(weights)
+
+        # Get the compiler parameters
+        with open("aira_ml/config/compiler_config.json") as file:
+            params = json.load(file)
+
+        # Determine the output depths
+        out_mantissa = n_in_mantissa + params["mantissa_growth"]
+        out_exponent = n_in_exponent + params["exponent_growth"]
         
         # Create the Aira Dense object, which will compile the data to
         # the representations used in the FPGA.
@@ -45,22 +67,20 @@ class ModelCompiler:
             weights         = weights,
             biases          = biases, 
             act_name        = layer.activation.__qualname__,
-            n_data_mantissa = 3,
-            n_data_exponent = 3,
-            n_input_mantissa= 3,
-            n_input_exponent= 3,
-            n_weight_mantissa= 3,
-            n_weight_exponent= 3,
-            n_output_mantissa= 3,
-            n_output_exponent= 4,
-            n_overflow       = 1,
-            mult_extra       = 1
+            n_input_mantissa= n_in_mantissa,
+            n_input_exponent= n_in_exponent,
+            n_weight_mantissa= params["weight_mantissa"],
+            n_weight_exponent= params["weight_exponent"],
+            n_output_mantissa= out_mantissa,
+            n_output_exponent= out_exponent,
+            n_overflow       = params["n_overflow"],
+            mult_extra       = params["mult_extra"]
         )
 
-        return dense_obj
+        return dense_obj, out_mantissa, out_exponent
 
     @classmethod
-    def extract_flatten(cls, layer, index):
+    def extract_flatten(cls, layer, index=0):
         """This method extracts relevant data from a Flatten layer.
         This method will be utilised when integrating aira-ml into 
         a larger framework, as all data is automatically flattened

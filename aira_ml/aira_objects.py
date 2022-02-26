@@ -11,8 +11,7 @@ class DenseAira:
         n_input_mantissa, n_input_exponent,
         n_weight_mantissa, n_weight_exponent,
         n_output_mantissa, n_output_exponent,
-        n_overflow, mult_extra,
-        n_data_mantissa, n_data_exponent):
+        n_overflow, mult_extra):
         
         self.index = index
 
@@ -30,9 +29,6 @@ class DenseAira:
         self.post_neuron_num = weight_dims[1]
 
         # Assign the datapath parameters
-
-        self.n_data_mantissa = n_data_mantissa
-        self.n_data_exponent = n_data_exponent
 
         self.n_input_mantissa = n_input_mantissa
         self.n_input_exponent = n_input_exponent
@@ -98,7 +94,7 @@ class DenseAira:
         
         # Add one to the address number to allow for the 'all ones' row break code in hardware.
         self.n_pre_addr = ceil(log2(max_delta + 1))
-        self.n_memory = self.n_pre_addr + 1 + self.n_data_mantissa + self.n_data_exponent
+        self.n_memory = self.n_pre_addr + 1 + self.n_weight_mantissa + self.n_weight_exponent
         
         # Compile the weights.
         comp_weights = []
@@ -130,8 +126,8 @@ class DenseAira:
                 if delta == 0:
                     comp_weight = BinCompiler.compile_to_float(
                         data_weight,
-                        self.n_data_mantissa,
-                        self.n_data_exponent
+                        self.n_weight_mantissa,
+                        self.n_weight_exponent
                     )
 
                     break_code = "1" * self.n_pre_addr
@@ -148,8 +144,8 @@ class DenseAira:
 
         comp_weight = BinCompiler.compile_to_float(
             data, 
-            n_mantissa = self.n_data_mantissa,
-            n_exponent = self.n_data_exponent
+            n_mantissa = self.n_weight_mantissa,
+            n_exponent = self.n_weight_exponent
         )
 
         comp_addr = BinCompiler.compile_to_uint(
