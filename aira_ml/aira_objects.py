@@ -177,9 +177,6 @@ class DenseAira:
         
         output_str = output_str.replace("<act_code>", act_code)
 
-        output_str = output_str.replace("<index>", str(self.index))
+        output_str = output_str.replace("<i>", str(self.index))
 
-        print(output_str)
-        exit()
-
-
+        return output_str
