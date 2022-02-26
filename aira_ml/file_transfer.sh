@@ -11,7 +11,7 @@ echo "Beginning parameter file transfer to Vivado host machine..."
 
 # Absolute path this script is in. Will not work for symlinks.
 SCRIPTPATH="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-CACHEPATH="/file_cache/"
+CACHEPATH="/cache/"
 FINALPATH="$SCRIPTPATH$CACHEPATH"
 
 # Transfer the files over SSH to the host machine

@@ -222,7 +222,7 @@ class ModelCompiler:
         server_addr = server_config["ssh_addr"]
         vivado_loc = server_config["vivado_loc"]
         project_path = server_config["project_loc"]
-        script_path = cwd + "/aira_ml/tools/shell_scripts/file_transfer.sh {} {} {} {}"
+        script_path = cwd + "/aira_ml/file_transfer.sh {} {} {} {}"
 
         check_call(script_path.format(server_path, server_addr, vivado_loc, project_path), shell=True)
     
