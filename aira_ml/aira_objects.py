@@ -29,6 +29,8 @@ class DenseAira:
         self.pre_neuron_num = weight_dims[0]
         self.post_neuron_num = weight_dims[1]
 
+        # Assign the datapath parameters
+
         self.n_data_mantissa = n_data_mantissa
         self.n_data_exponent = n_data_exponent
 
@@ -37,6 +39,11 @@ class DenseAira:
 
         self.input_is_floating = (n_input_exponent != 0)
 
+        if self.input_is_floating:
+            self.n_input = 1 + self.n_input_exponent + self.n_input_mantissa
+        else:
+            self.n_input = self.n_input_mantissa
+
         self.n_weight_mantissa = n_weight_mantissa
         self.n_weight_exponent = n_weight_exponent
 
@@ -44,6 +51,11 @@ class DenseAira:
         self.n_output_exponent = n_output_exponent
 
         self.output_is_floating = (n_output_exponent != 0)
+
+        if self.input_is_floating:
+            self.n_output = 1 + self.n_output_exponent + self.n_output_mantissa
+        else:
+            self.n_output = self.n_output_mantissa
 
         # Multiplier optimisation parameters - control of internal datapaths
         self.n_overflow = n_overflow
@@ -160,12 +172,14 @@ class DenseAira:
 
         output_str = output_str.replace("<n_man_input>", str(self.n_input_mantissa))
         output_str = output_str.replace("<n_exp_input>", str(self.n_input_exponent))
+        output_str = output_str.replace("<n_input>", str(self.n_input))
 
         output_str = output_str.replace("<n_man_weight>", str(self.n_weight_mantissa))
         output_str = output_str.replace("<n_exp_weight>", str(self.n_weight_exponent))
 
         output_str = output_str.replace("<n_man_out>", str(self.n_output_mantissa))
         output_str = output_str.replace("<n_exp_out>", str(self.n_output_exponent))
+        output_str = output_str.replace("<n_output>", str(self.n_output))
 
         output_str = output_str.replace("<n_overflow>", str(self.n_overflow))
         output_str = output_str.replace("<mult_extra>", str(self.mult_extra))
@@ -184,3 +198,19 @@ class DenseAira:
         output_str = output_str.replace("<i>", str(self.index))
 
         return output_str
+
+    def compile_verilog_wires(self):
+        """Insert the marked-up wire declarations into the Verilog source code.
+        Returns the SystemVerilog code as a string.
+        """
+
+        output_str = open("aira_ml/sv_source/dense_wires.sv").read()
+        return output_str.replace("<i>", str(self.index))
+
+    def compile_verilog_module(self):
+        """Insert the marked-up module declaration into the Verilog source code.
+        Returns the SystemVerilog code as a string.
+        """
+
+        output_str = open("aira_ml/sv_source/dense_module.sv").read()
+        return output_str.replace("<i>", str(self.index))

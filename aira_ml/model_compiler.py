@@ -25,10 +25,7 @@ class ModelCompiler:
         
         cls.compile_full_header(aira_sequential)
 
-        aira_ml_top    = open("aira_ml/sv_source/aira_ml_top.sv").read()
-
-        with open("aira_ml/cache/aira_ml_top.sv", "w") as output_file:
-            output_file.write(aira_ml_top)
+        cls.compile_system_verilog(aira_sequential)
 
     @classmethod
     def extract_dense(cls, layer, index):
@@ -107,6 +104,26 @@ class ModelCompiler:
         with open("aira_ml/cache/aira_params.vh", 'w') as output_file:
             output_file.write(verilog_header)
         
-        
+    @classmethod
+    def compile_system_verilog(cls, aira_sequential):
+        """ Compiles the full SystemVerilog source file.
+        The Aira objects are passed in as a list.
+        """
+
+        aira_ml_top = open("aira_ml/sv_source/aira_ml_top.sv").read()
+
+        # Add wire declarations to the Verilog
+        for aira_obj in aira_sequential:
+            aira_ml_top += aira_obj.compile_verilog_wires()
+
+        # Add module declarations to the Verilog
+        for aira_obj in aira_sequential:
+            aira_ml_top += aira_obj.compile_verilog_module()
+
+        # Terminate the aira_ml_toip module
+        aira_ml_top += "\nendmodule"
+
+        with open("aira_ml/cache/aira_ml_top.sv", "w") as output_file:
+            output_file.write(aira_ml_top)
 
 ModelCompiler.compile_tf_model("models/dense_mnist/model")
