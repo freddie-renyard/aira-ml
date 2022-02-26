@@ -27,7 +27,6 @@ class ModelCompiler:
 
         index = 0
         for layer in model.layers:
-
             if 'dense' in layer.name:
 
                 dense_obj, prev_man, prev_exp = cls.extract_dense(layer, index, prev_man, prev_exp)
@@ -178,5 +177,13 @@ class ModelCompiler:
         connections_str += output_str.replace("<i_pre>", obj_index)
 
         return connections_str
+
+    @staticmethod
+    def compile_serial_params():
+        """Compiles the parameters needed to run the serial interface.
+        Nothing is returned; a JSON file is saved to the cache.
+        """
+
+
     
 ModelCompiler.compile_tf_model("models/dense_mnist/model")
