@@ -4,3 +4,4 @@ aira_ml/tools/__pycache__
 tests/pycache/
 aira_ml/cache
 notes.txt
+aira_ml/config/server_config.json
