@@ -24,6 +24,8 @@ class SerialLink:
         self.tx_num = params["input_number"]
         self.rx_num = params["output_number"]
 
+        self.rx_tensor_shape = params["output_tensor_shape"]
+
         # Get the input formats as integers for faster comparisons.
         # 0 - int, 1 - float.
         self.in_format_code = self.get_format_code(params["input_format"])
@@ -67,6 +69,13 @@ class SerialLink:
         """
         in_tensor = np.array(in_tensor)
         return np.reshape(in_tensor, (self.tx_num), order="C")
+
+    def reshape_tensor(self, in_flat_tensor):
+        """ Reshape the received tensor into it's proper form.
+        """
+
+        target_shape = self.rx_tensor_shape
+        return np.reshape(in_flat_tensor, target_shape)
 
     def begin_serial(self, timeout):
         """Begin the serial communication to the FPGA.
@@ -169,8 +178,7 @@ class SerialLink:
             
             flat_outputs.append(rx_val)
 
-        # TODO Reshape this into the output tensor shape.
-        return flat_outputs
+        return self.reshape_tensor(flat_outputs)
             
     def get_inference(self, tensor):
         """Send data to the FPGA and await a response.
@@ -188,17 +196,3 @@ class SerialLink:
             return 0
         else:
             raise AiraException("Data format not recognised.")
-
-    def trial_flatten(self):
-        """Test method to allow testing of different input tensor shapes
-        to ensure that they are flattened appropriately.
-        """
-        inputs = Input(shape=(3,3))
-        prediction = Flatten()(inputs)
-        model = Model(inputs=inputs, outputs=prediction)
-
-        X = np.arange(0,9).reshape(1,3,3)
-
-        print(X)
-        print(np.reshape(X, (9)))
-        print(model.predict(X))

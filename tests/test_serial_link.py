@@ -17,10 +17,7 @@ def send_image_internal():
     test_data = x_test[4] / 256.0
 
     uart_data = link.send_data(test_data)
-    out_data = link.receive_data(uart_data)
-
-    out_img_shape = np.shape(test_data)
-    out_img = np.reshape(out_data, out_img_shape)
+    out_img = link.receive_data(uart_data)
 
     plt.subplot(1,2,1)
     plt.imshow(test_data)

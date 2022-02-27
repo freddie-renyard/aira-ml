@@ -38,6 +38,10 @@ class ModelCompiler:
                 index += 1
             elif 'flatten' in layer.name:
                 cls.extract_flatten(layer)
+
+        # Extract the shape of the output tensor from the last layer.
+        shape = np.array(layer.output_shape)
+        output_shape = list(shape[shape != np.array(None)])
         
         cls.compile_full_header(aira_sequential)
 
@@ -54,6 +58,7 @@ class ModelCompiler:
             n_in_exp    = aira_sequential[0].n_input_exponent,
             n_out_man   = aira_sequential[-1].n_output_mantissa,
             n_out_exp   = aira_sequential[-1].n_output_exponent,
+            output_shape = output_shape
         )
 
         cls.call_synthesis_server()
@@ -201,7 +206,8 @@ class ModelCompiler:
         input_num, output_num, 
         in_format, out_format,
         n_in_man, n_in_exp,
-        n_out_man, n_out_exp):
+        n_out_man, n_out_exp,
+        output_shape):
         """Compiles the parameters needed to run the serial interface.
         Nothing is returned; a JSON file is saved to the cache.
         """
@@ -231,6 +237,8 @@ class ModelCompiler:
 
         json_dict["n_output_mantissa"] = n_out_man
         json_dict["n_output_exponent"] = n_out_exp
+
+        json_dict["output_tensor_shape"] = output_shape
 
         with open("aira_ml/cache/serial_params.json", "w") as file:
             json.dump(json_dict, file)
