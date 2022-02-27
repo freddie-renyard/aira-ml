@@ -37,16 +37,16 @@ class SerialLink:
         self.n_out_man = params["n_output_mantissa"]
         self.n_out_exp = params["n_output_exponent"]
 
+        # Get the single byte codes that signal different data
+        # requests/sends to the FPGA.
+        self.code_data_in = self.get_format_code(params["input_format"])
+        self.code_data_out = self.get_format_code(params["output_format"])
+
         with open("aira_ml/config/serial_config.json") as file:
             params = json.load(file)
 
         self.baud = params["baud_rate"]
         self.port_name = params["serial_port"]
-
-        # Get the single byte codes that signal different data
-        # requests/sends to the FPGA.
-        self.code_data_in = params["code_data_in"]
-        self.code_data_out = params["code_data_out"]
 
         if self.code_data_out == 0:
             # ...The output is a signed integer.
@@ -55,16 +55,11 @@ class SerialLink:
         elif self.code_data_out == 1:
             # ...The output is a float.
             self.n_output = (1 + self.n_out_man + self.n_out_exp)
-            self.bytes_to_rx = self.n_output * self.rx_num
+            self.bits_to_rx = self.n_output * self.rx_num
         
         self.bytes_to_rx = ceil(self.bits_to_rx / 8)
 
-        # FOR TESTING
-        test_data = np.arange(0,784).reshape(1,28,28) / 784.0
-        print(test_data)
-        self.send_data(test_data)
-
-        self.begin_serial(5)
+        #self.begin_serial(5)
     
     def flatten_tensor(self, in_tensor):
         """Flatten an input tensor to allow for serial transmission 
@@ -139,19 +134,44 @@ class SerialLink:
             self.serial_link.write(tx_data.bytes)
         except:
             print("SERIAL: Data write failed.")
+            return tx_data.bytes
 
-    def receive_data(self):
+    def receive_data(self, test_data=None):
         """Receive data from the FPGA over the serial port.
         Returns the model's output tensor.
         """
-
-        rx_bytes = self.serial_link.read(size=self.bytes_to_rx)
+        if test_data == None:
+            rx_bytes = self.serial_link.read(size=self.bytes_to_rx)
+        else:
+            rx_bytes = test_data
+        
         rx_data = BitArray(rx_bytes).bin
 
         # Truncate the data received to remove leading 0s, as the serial
         # link only transmits bytes.
+        self.bits_to_rx = self.rx_num * self.n_rx
         rx_data = rx_data[:self.bits_to_rx]
 
+        # Extract the binary from the serial string.
+        # Start at the end of the string, as this is the first value.
+        flat_outputs = []
+        for i in range(self.bits_to_rx-self.n_rx, -self.n_rx, -self.n_rx): # FOR TESTING
+
+            if self.code_data_out == 1:
+                rx_val = BinCompiler.decode_custom_float(
+                    rx_data[i:i+self.n_rx],
+                    self.n_in_man,
+                    self.n_in_exp
+                )
+            elif self.code_data_out == 0:
+                rx_val = BitArray(bin=rx_data[i:i+self.n_rx]).int
+                rx_val /= 2 ** (self.n_out_man)
+            
+            flat_outputs.append(rx_val)
+
+        # TODO Reshape this into the output tensor shape.
+        return flat_outputs
+            
     def get_inference(self, tensor):
         """Send data to the FPGA and await a response.
         """
