@@ -8,6 +8,7 @@ from keras.models import Model
 import json
 import time
 import serial
+from bitstring import Bits
 
 from aira_ml.tools.aira_exceptions import AiraException
 from aira_ml.tools.binary_tools import BinCompiler 
@@ -48,6 +49,11 @@ class SerialLink:
         # requests/sends to the FPGA.
         self.code_data_in = params["code_data_in"]
         self.code_data_out = params["code_data_out"]
+        
+        # FOR TESTING
+        test_data = np.arange(0,784).reshape(1,28,28) / 784.0
+        print(test_data)
+        self.send_data(test_data)
 
         self.begin_serial(5)
     
@@ -88,32 +94,48 @@ class SerialLink:
 
         flat_tensor = self.flatten_tensor(tensor)
 
+        # Serialise the output data.
+        # Format: LSBs - index 0 of the flattened tensor
+
+        # Concatenate all the entries together to save bandwidth.
+        # The hardware will use an appropriately sized intermediate 
+        # register to reconstruct the data.
+        bin_to_send = ""
         if self.in_format_code == 0:
-            bin_to_send = [
             
             # The implicit assumption here is that the range of all integers is -1 to 1.
             # Anything else should be compiled to a floating point format.
-            BinCompiler.compile_to_signed(
-                value       = x, 
-                n_output    = self.n_in_man, 
-                n_radix     = self.n_in_man
-            ) 
+            for value in flat_tensor:
+                bin_val = BinCompiler.compile_to_signed(
+                    value       = value, 
+                    n_output    = self.n_in_man, 
+                    n_radix     = self.n_in_man
+                )
 
-            for x in flat_tensor]
+                bin_to_send = bin_val + bin_to_send
+            
         elif self.in_format_code == 1:
-            bin_to_send = [
+            for value in flat_tensor:
+                bin_val = BinCompiler.compile_to_float(
+                    value,
+                    self.n_in_man,
+                    self.n_in_exp
+                ) 
 
-            BinCompiler.compile_to_float(
-                x,
-                self.n_in_man,
-                self.n_in_exp
-            )
+                bin_to_send = bin_val + bin_to_send
 
-            for x in flat_tensor]
+        tx_data = Bits(bin=bin_to_send)
 
-    def get_inference(self):
+        try:
+            self.serial_link.write(tx_data.bytes)
+        except:
+            print("SERIAL: Data write failed.")
+
+    def get_inference(self, tensor):
         """Send data to the FPGA and await a response.
         """
+
+        self.send_data(tensor)
 
     def get_format_code(self, format_str):
         """Get the input format as a code for quicker comparisons when sending data.
