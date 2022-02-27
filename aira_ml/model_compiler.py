@@ -6,6 +6,7 @@ from aira_ml.aira_objects import DenseAira
 import json
 import os
 from subprocess import check_call
+from aira_ml.tools.aira_exceptions import AiraException
 
 class ModelCompiler:
 
@@ -46,7 +47,13 @@ class ModelCompiler:
             n_input     = aira_sequential[0].n_input,
             n_output    = aira_sequential[-1].n_output,
             input_num   = aira_sequential[0].pre_neuron_num,
-            output_num  = aira_sequential[-1].post_neuron_num
+            output_num  = aira_sequential[-1].post_neuron_num,
+            in_format   = cls.determine_format(aira_sequential[0]),
+            out_format  = cls.determine_format(aira_sequential[-1], get_input=False),
+            n_in_man    = aira_sequential[0].n_input_mantissa,
+            n_in_exp    = aira_sequential[0].n_input_exponent,
+            n_out_man   = aira_sequential[-1].n_output_mantissa,
+            n_out_exp   = aira_sequential[-1].n_output_exponent,
         )
 
         cls.call_synthesis_server()
@@ -190,7 +197,11 @@ class ModelCompiler:
         return connections_str
 
     @staticmethod
-    def compile_serial_params(n_input, n_output, input_num, output_num):
+    def compile_serial_params(n_input, n_output, 
+        input_num, output_num, 
+        in_format, out_format,
+        n_in_man, n_in_exp,
+        n_out_man, n_out_exp):
         """Compiles the parameters needed to run the serial interface.
         Nothing is returned; a JSON file is saved to the cache.
         """
@@ -205,8 +216,39 @@ class ModelCompiler:
         json_dict["input_number"] = input_num
         json_dict["output_number"] = output_num
 
+        if in_format == 'float' or in_format == 'int':
+            json_dict["input_format"] = in_format
+        else:
+            raise AiraException("Input format is not recognised as float or int.")
+
+        if out_format == 'float' or out_format == 'int':
+            json_dict["output_format"] = out_format
+        else:
+            raise AiraException("Output format is not recognised as float or int.")
+
+        json_dict["n_input_mantissa"] = n_in_man
+        json_dict["n_input_exponent"] = n_in_exp
+
+        json_dict["n_output_mantissa"] = n_out_man
+        json_dict["n_output_exponent"] = n_out_exp
+
         with open("aira_ml/cache/serial_params.json", "w") as file:
             json.dump(json_dict, file)
+
+    @staticmethod
+    def determine_format(obj, get_input=True):
+        """Determines the input or output format of an Aira object.
+        Used for compiling the parameters needed for the serial link.
+        """
+        if get_input:
+            exp_num = obj.n_input_exponent
+        else:
+            exp_num = obj.n_output_exponent
+        
+        if exp_num == 0:
+            return 'int'
+        else:
+            return 'float'
 
     @staticmethod
     def call_synthesis_server():
