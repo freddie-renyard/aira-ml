@@ -1,6 +1,3 @@
-from lib2to3.pgen2.token import N_TOKENS
-from tkinter import N
-from pytest import param
 import tensorflow as tf
 import numpy as np
 from keras.layers import Input, Flatten
@@ -8,7 +5,8 @@ from keras.models import Model
 import json
 import time
 import serial
-from bitstring import Bits
+from bitstring import Bits, BitArray
+from math import ceil
 
 from aira_ml.tools.aira_exceptions import AiraException
 from aira_ml.tools.binary_tools import BinCompiler 
@@ -49,7 +47,18 @@ class SerialLink:
         # requests/sends to the FPGA.
         self.code_data_in = params["code_data_in"]
         self.code_data_out = params["code_data_out"]
+
+        if self.code_data_out == 0:
+            # ...The output is a signed integer.
+            self.n_output = self.n_out_man
+            self.bits_to_rx = (self.n_output * self.rx_num)
+        elif self.code_data_out == 1:
+            # ...The output is a float.
+            self.n_output = (1 + self.n_out_man + self.n_out_exp)
+            self.bytes_to_rx = self.n_output * self.rx_num
         
+        self.bytes_to_rx = ceil(self.bits_to_rx / 8)
+
         # FOR TESTING
         test_data = np.arange(0,784).reshape(1,28,28) / 784.0
         print(test_data)
@@ -130,6 +139,18 @@ class SerialLink:
             self.serial_link.write(tx_data.bytes)
         except:
             print("SERIAL: Data write failed.")
+
+    def receive_data(self):
+        """Receive data from the FPGA over the serial port.
+        Returns the model's output tensor.
+        """
+
+        rx_bytes = self.serial_link.read(size=self.bytes_to_rx)
+        rx_data = BitArray(rx_bytes).bin
+
+        # Truncate the data received to remove leading 0s, as the serial
+        # link only transmits bytes.
+        rx_data = rx_data[:self.bits_to_rx]
 
     def get_inference(self, tensor):
         """Send data to the FPGA and await a response.
