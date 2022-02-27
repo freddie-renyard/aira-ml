@@ -113,7 +113,7 @@ class SerialLink:
                 bin_val = BinCompiler.compile_to_signed(
                     value       = value, 
                     n_output    = self.n_in_man, 
-                    n_radix     = self.n_in_man
+                    n_radix     = self.n_in_man-1
                 )
 
                 bin_to_send = bin_val + bin_to_send
