@@ -144,7 +144,7 @@ class SerialLink:
 
         try:
             self.serial_link.write(tx_data.bytes)
-            time.sleep(0.0001)
+            time.sleep(0.001)
         except:
             print("SERIAL: Data write failed.")
 
@@ -169,7 +169,7 @@ class SerialLink:
                 )
             elif self.code_data_out == 0:
                 rx_val = BitArray(bin=rx_data[i:i+self.n_rx]).int
-                rx_val /= 2 ** (self.n_out_man)
+                rx_val /= 2 ** (self.n_out_man-1)
             
             flat_outputs.append(rx_val)
 

@@ -14,7 +14,7 @@ def send_image_internal():
 
     link = SerialLink()
 
-    for i in range(30):
+    for i in range(1):
         test_data = x_test[i] / 256.0
         out_img = link.get_inference(test_data)
         print("Got image!")
