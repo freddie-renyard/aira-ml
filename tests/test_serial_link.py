@@ -1,5 +1,4 @@
 from cgi import test
-import tensorflow as tf
 from aira_ml.serial_link import SerialLink
 import numpy as np
 from tensorflow.keras.datasets import mnist
@@ -14,10 +13,11 @@ def send_image_internal():
     (_, _), (x_test, _) = mnist.load_data()
 
     link = SerialLink()
-    test_data = x_test[4] / 256.0
 
-    uart_data = link.send_data(test_data)
-    out_img = link.receive_data(uart_data)
+    for i in range(30):
+        test_data = x_test[i] / 256.0
+        out_img = link.get_inference(test_data)
+        print("Got image!")
 
     plt.subplot(1,2,1)
     plt.imshow(test_data)

@@ -61,7 +61,7 @@ class SerialLink:
         
         self.bytes_to_rx = ceil(self.bits_to_rx / 8)
 
-        #self.begin_serial(5)
+        self.begin_serial(5)
     
     def flatten_tensor(self, in_tensor):
         """Flatten an input tensor to allow for serial transmission 
@@ -89,9 +89,11 @@ class SerialLink:
         attempts = 0
         
         while True: 
+            self.serial_link = serial.Serial(self.port_name, baudrate=self.baud, timeout=0.08)
             try:
-                self.serial_link = serial.Serial(self.port, baudrate=self.baud_rate, timeout=0.0005)
+                self.serial_link = serial.Serial(self.port_name, baudrate=self.baud, timeout=0.08)
                 print('AIRA: Opened serial port to device at', self.port_name)
+                break
             except:
                 print('AIRA: Failed to connect to {}. Reattempting...'.format(self.port_name))
                 attempts += 1
@@ -110,10 +112,6 @@ class SerialLink:
         # Serialise the output data.
         # Format: LSBs - index 0 of the flattened tensor
 
-        # Concatenate all the entries together to save bandwidth.
-        # The hardware will use an appropriately sized intermediate 
-        # register to reconstruct the data.
-        bin_to_send = ""
         if self.in_format_code == 0:
             
             # The implicit assumption here is that the range of all integers is -1 to 1.
@@ -125,8 +123,8 @@ class SerialLink:
                     n_radix     = self.n_in_man-1
                 )
 
-                bin_to_send = bin_val + bin_to_send
-            
+                self.tx_bin_str(bin_val)
+
         elif self.in_format_code == 1:
             for value in flat_tensor:
                 bin_val = BinCompiler.compile_to_float(
@@ -135,36 +133,33 @@ class SerialLink:
                     self.n_in_exp
                 ) 
 
-                bin_to_send = bin_val + bin_to_send
+                self.tx_bin_str(bin_val)
 
-        tx_data = Bits(bin=bin_to_send)
+    def tx_bin_str(self, tx_str):
+        """Write bits to the serial port.
+        """
+        
+        # TODO Edit the length to support arbitrary lengths.
+        tx_data = Bits(bin=tx_str)
 
         try:
             self.serial_link.write(tx_data.bytes)
+            time.sleep(0.0001)
         except:
             print("SERIAL: Data write failed.")
-            return tx_data.bytes
 
-    def receive_data(self, test_data=None):
+    def receive_data(self):
         """Receive data from the FPGA over the serial port.
         Returns the model's output tensor.
         """
-        if test_data == None:
-            rx_bytes = self.serial_link.read(size=self.bytes_to_rx)
-        else:
-            rx_bytes = test_data
-        
-        rx_data = BitArray(rx_bytes).bin
 
-        # Truncate the data received to remove leading 0s, as the serial
-        # link only transmits bytes.
-        self.bits_to_rx = self.rx_num * self.n_rx
-        rx_data = rx_data[:self.bits_to_rx]
+        rx_bytes = self.serial_link.read(size=self.bytes_to_rx)
+        rx_data = BitArray(bytes=rx_bytes).bin
 
         # Extract the binary from the serial string.
         # Start at the end of the string, as this is the first value.
         flat_outputs = []
-        for i in range(self.bits_to_rx-self.n_rx, -self.n_rx, -self.n_rx): # FOR TESTING
+        for i in range(0, self.bits_to_rx, self.n_rx): # FOR TESTING
 
             if self.code_data_out == 1:
                 rx_val = BinCompiler.decode_custom_float(
@@ -179,12 +174,14 @@ class SerialLink:
             flat_outputs.append(rx_val)
 
         return self.reshape_tensor(flat_outputs)
-            
+
     def get_inference(self, tensor):
         """Send data to the FPGA and await a response.
         """
 
         self.send_data(tensor)
+
+        return self.receive_data()
 
     def get_format_code(self, format_str):
         """Get the input format as a code for quicker comparisons when sending data.
