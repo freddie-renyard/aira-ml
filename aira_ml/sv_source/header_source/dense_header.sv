@@ -16,10 +16,11 @@ N_OUTPUT_<i> = <n_output>,
 N_OVERFLOW_<i> = <n_overflow>,
 MULT_EXTRA_<i> = <mult_extra>,
 
-MEM_DEPTH_<i> = <mem_depth>,
 N_ADDR_DELTA_<i> = <n_delta>,
 
 ACT_FUNC_<i> = <act_code>,
+
+THREADS_<i> = <threads>,
 
 FILE_ID_<i> = <i>;
 

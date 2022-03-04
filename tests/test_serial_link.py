@@ -32,5 +32,28 @@ def send_image_internal():
 
     plt.show()
 
+
+def send_img_for_inference():
+    
+
+    (_, _), (x_test, y_test) = mnist.load_data()
+
+    link = SerialLink()
+
+    for i in range(10):
+        test_data = x_test[i] / 256.0
+        out_img = link.get_inference(test_data)
+        print("Actual Output {} FPGA Predicted {}".format(y_test[i], np.argmax(out_img)))
+
+    plt.subplot(1,2,1)
+    plt.imshow(test_data)
+    plt.axis('off')
+    plt.title("Image Before Serial")
+    plt.title
+
+    
+
+    plt.show()
+
 if __name__ == "__main__":
-    send_image_internal()
+    send_img_for_inference()

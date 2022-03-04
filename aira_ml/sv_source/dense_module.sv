@@ -1,6 +1,7 @@
 
-  
-    dense_top #(
+
+    parameter integer MEM_DEPTHS_<i> [THREADS_<i>-1:0] = '{<thread-list>};
+    dense_threaded_top #(
         .PRE_NEURON_NUM(PRE_NEURON_NUM_<i>),
         .POST_NEURON_NUM(POST_NEURON_NUM_<i>),
         .N_MAN_INPUT(N_MAN_INPUT_<i>),
@@ -11,8 +12,9 @@
         .N_EXP_OUT(N_EXP_OUT_<i>),
         .N_OVERFLOW(N_OVERFLOW_<i>),
         .MULT_EXTRA(MULT_EXTRA_<i>),
-        .MEM_DEPTH(MEM_DEPTH_<i>), 
+        .MEM_DEPTH(MEM_DEPTHS_<i>), 
         .ACT_FUNC(ACT_FUNC_<i>),
+        .THREADS(THREADS_<i>),
         .N_ADDR_DELTA(N_ADDR_DELTA_<i>),
         .FILE_ID(FILE_ID_<i>)
     ) dense_<i> (

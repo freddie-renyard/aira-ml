@@ -1,12 +1,12 @@
 {
     "weight_mantissa": 3,
     "weight_exponent": 3,
-    "mult_extra": 1,
+    "mult_extra": 2,
     "n_overflow": 1,
 
-    "mantissa_growth": 1,
-    "exponent_growth": 1,
+    "mantissa_growth": 0,
+    "exponent_growth": 0,
 
-    "starting_mantissa": 3,
-    "starting_exponent": 3
+    "starting_mantissa": 4,
+    "starting_exponent": 4
 }

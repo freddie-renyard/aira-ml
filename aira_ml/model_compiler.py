@@ -28,11 +28,15 @@ class ModelCompiler:
         prev_man = params["starting_mantissa"]
         prev_exp = params["starting_exponent"]
 
+        # Make the first layer multithreaded
+        multithread = True
+
         index = 0
         for layer in model.layers:
             if 'dense' in layer.name:
-
-                dense_obj, prev_man, prev_exp = cls.extract_dense(layer, index, prev_man, prev_exp)
+                
+                dense_obj, prev_man, prev_exp = cls.extract_dense(layer, index, prev_man, prev_exp, multithreading=multithread)
+                multithread = False
                 aira_sequential.append(dense_obj)
 
                 index += 1
@@ -64,14 +68,14 @@ class ModelCompiler:
         cls.call_synthesis_server()
 
     @classmethod
-    def extract_dense(cls, layer, index, n_in_mantissa, n_in_exponent):
+    def extract_dense(cls, layer, index, n_in_mantissa, n_in_exponent, multithreading=False):
         """This method compiles the data in a dense layer to a Dense
         Aira object.
         """
 
         weights, biases = layer.get_weights()
 
-        weights = MatrixTools.sparsify_matrix_simple(weights, density=0.5)
+        weights = MatrixTools.threshold_matrix(weights, threshold=0.04, verbose=True)
         #MatrixTools.plot_histogram(weights)
 
         # Get the compiler parameters
@@ -81,6 +85,11 @@ class ModelCompiler:
         # Determine the output depths
         out_mantissa = n_in_mantissa + params["mantissa_growth"]
         out_exponent = n_in_exponent + params["exponent_growth"]
+
+        if multithreading:
+            threads = 16
+        else:
+            threads = 1
         
         # Create the Aira Dense object, which will compile the data to
         # the representations used in the FPGA.
@@ -96,7 +105,8 @@ class ModelCompiler:
             n_output_mantissa= out_mantissa,
             n_output_exponent= out_exponent,
             n_overflow       = params["n_overflow"],
-            mult_extra       = params["mult_extra"]
+            mult_extra       = params["mult_extra"],
+            threads          = threads
         )
 
         return dense_obj, out_mantissa, out_exponent
@@ -186,7 +196,7 @@ class ModelCompiler:
         # Add intermediate connections to the Verilog
         obj_num = len(aira_sequential)
 
-        for i in range(1, obj_num-1):
+        for i in range(1, obj_num):
             pre_index = str(aira_sequential[i-1].index)
             post_index = str(aira_sequential[i].index)
 

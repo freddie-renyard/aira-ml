@@ -18,8 +18,10 @@ class SerialLink:
         with open("aira_ml/cache/serial_params.json", "r") as file:
             params = json.load(file)
 
-        self.n_tx = params["input_bit_depth"]
-        self.n_rx = params["output_bit_depth"]
+        self.n_tx = ceil(params["input_bit_depth"] / 8) * 8
+
+        self.n_rx = ceil(params["output_bit_depth"] / 8) * 8
+        self.n_output = params["output_bit_depth"]
 
         self.tx_num = params["input_number"]
         self.rx_num = params["output_number"]
@@ -50,16 +52,8 @@ class SerialLink:
         self.baud = params["baud_rate"]
         self.port_name = params["serial_port"]
 
-        if self.code_data_out == 0:
-            # ...The output is a signed integer.
-            self.n_output = self.n_out_man
-            self.bits_to_rx = (self.n_output * self.rx_num)
-        elif self.code_data_out == 1:
-            # ...The output is a float.
-            self.n_output = (1 + self.n_out_man + self.n_out_exp)
-            self.bits_to_rx = self.n_output * self.rx_num
-        
-        self.bytes_to_rx = ceil(self.bits_to_rx / 8)
+        self.bytes_to_rx = int(self.n_rx / 8) * self.rx_num
+        self.bits_to_rx = self.bytes_to_rx * 8
 
         self.begin_serial(5)
     
@@ -89,9 +83,9 @@ class SerialLink:
         attempts = 0
         
         while True: 
-            self.serial_link = serial.Serial(self.port_name, baudrate=self.baud, timeout=0.08)
+            self.serial_link = serial.Serial(self.port_name, baudrate=self.baud, timeout=1)
             try:
-                self.serial_link = serial.Serial(self.port_name, baudrate=self.baud, timeout=0.08)
+                self.serial_link = serial.Serial(self.port_name, baudrate=self.baud)
                 print('AIRA: Opened serial port to device at', self.port_name)
                 break
             except:
@@ -108,6 +102,7 @@ class SerialLink:
         """
 
         flat_tensor = self.flatten_tensor(tensor)
+        self.debug_tx_bin = []
 
         # Serialise the output data.
         # Format: LSBs - index 0 of the flattened tensor
@@ -122,17 +117,15 @@ class SerialLink:
                     n_output    = self.n_in_man, 
                     n_radix     = self.n_in_man-1
                 )
-
                 self.tx_bin_str(bin_val)
-
+                
         elif self.in_format_code == 1:
             for value in flat_tensor:
                 bin_val = BinCompiler.compile_to_float(
                     value,
                     self.n_in_man,
                     self.n_in_exp
-                ) 
-
+                )
                 self.tx_bin_str(bin_val)
 
     def tx_bin_str(self, tx_str):
@@ -140,11 +133,11 @@ class SerialLink:
         """
         
         # TODO Edit the length to support arbitrary lengths.
-        tx_data = Bits(bin=tx_str)
+        tx_data = Bits(bin="0000000"+tx_str)
 
         try:
             self.serial_link.write(tx_data.bytes)
-            time.sleep(0.001)
+            time.sleep(0.0002)
         except:
             print("SERIAL: Data write failed.")
 
@@ -152,25 +145,27 @@ class SerialLink:
         """Receive data from the FPGA over the serial port.
         Returns the model's output tensor.
         """
-
+        
+        
         rx_bytes = self.serial_link.read(size=self.bytes_to_rx)
         rx_data = BitArray(bytes=rx_bytes).bin
 
         # Extract the binary from the serial string.
         # Start at the end of the string, as this is the first value.
         flat_outputs = []
-        for i in range(0, self.bits_to_rx, self.n_rx): # FOR TESTING
+        for i in range(0, self.bits_to_rx, self.n_rx): 
 
+            data_raw = rx_data[i+5:i+self.n_rx]
             if self.code_data_out == 1:
                 rx_val = BinCompiler.decode_custom_float(
-                    rx_data[i:i+self.n_rx],
-                    self.n_in_man,
-                    self.n_in_exp
+                    data_raw,
+                    self.n_out_man,
+                    self.n_out_exp
                 )
             elif self.code_data_out == 0:
-                rx_val = BitArray(bin=rx_data[i:i+self.n_rx]).int
+                rx_val = BitArray(bin=data_raw).int
                 rx_val /= 2 ** (self.n_out_man-1)
-            
+        
             flat_outputs.append(rx_val)
 
         return self.reshape_tensor(flat_outputs)

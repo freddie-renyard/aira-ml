@@ -12,3 +12,5 @@ module aira_ml (
         output o_d_valid,
         input i_stall
     );
+
+    `include "aira_params.vh"

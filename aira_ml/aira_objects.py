@@ -1,5 +1,8 @@
+from concurrent.futures import thread
 from tabnanny import verbose
 import numpy as np
+from scipy.fftpack import shift
+from sklearn.multiclass import OutputCodeClassifier
 from aira_ml.tools.aira_exceptions import AiraException
 from aira_ml.tools.binary_tools import BinCompiler
 from aira_ml.tools.file_tools import Filetools
@@ -11,10 +14,11 @@ class DenseAira:
         n_input_mantissa, n_input_exponent,
         n_weight_mantissa, n_weight_exponent,
         n_output_mantissa, n_output_exponent,
-        n_overflow, mult_extra):
+        n_overflow, mult_extra,
+        threads):
         
         self.index = index
-
+        
         # Ensure that the activation function used in the layer has
         # hardware support.
         self.act_name = None
@@ -27,6 +31,8 @@ class DenseAira:
         weight_dims = np.shape(weights)
         self.pre_neuron_num = weight_dims[0]
         self.post_neuron_num = weight_dims[1]
+
+        self.threads = self.verify_thread_validity(threads, self.post_neuron_num)
 
         # Assign the datapath parameters
 
@@ -62,26 +68,57 @@ class DenseAira:
             raise AiraException("The weights for Dense layer {} are not stored in a 2D tensor.".format(index))
 
         # Compile the weights and biases.
-        self.comp_weights = self.compile_mem(weights, biases, compile_delta=True)
+        weights = np.transpose(weights)
+        self.mem_depths = []
+        self.n_pre_addr = self.determine_mem_depth(weights)
 
-        Filetools.save_to_file(
-            "dense_weights_{}".format(index), 
-            self.comp_weights, 
-            verbose=False
-        )
+        if self.threads == 1:
+            compiled_weights = self.compile_mem(weights, biases)
+
+            Filetools.save_to_file(
+                "dense_weights_{}_thread_{}".format(index, 0), 
+                compiled_weights, 
+                verbose=False
+            )
+
+            self.mem_depths.append(len(compiled_weights))
+        else:
+            # TODO Put this into a function.
+
+            neurons_per_thread = self.post_neuron_num // self.threads
+
+            # Create an empty 3D numpy array with shape: 
+            # (number of threads, neurons_per_thread, pre neuron number)
+            interlaced_shape = (self.threads, neurons_per_thread, self.pre_neuron_num)
+            weights_interlaced = np.zeros(interlaced_shape)
+
+            # Create an empty 2D numpy array for the interlaced biases.
+            biases_shape = (threads, neurons_per_thread)
+            biases_interlaced = np.zeros(biases_shape)
+
+            # Interlace the weight matrix into seperate matrices.
+            for i, data in enumerate(zip(weights, biases)):
+                weights_interlaced[i % self.threads][i // self.threads] = data[0]
+                biases_interlaced[i % self.threads][i // self.threads] = data[1]
+
+            # Compile the data. TODO Combine with above loop.
+            for thread_i, data in enumerate(zip(weights_interlaced, biases_interlaced)):
+                compiled_weights = self.compile_mem(data[0], data[1])
+                print(len(compiled_weights))
+                self.mem_depths.append(len(compiled_weights))
+                Filetools.save_to_file(
+                    "dense_weights_{}_thread_{}".format(index, thread_i), 
+                    self.compile_mem(data[0], data[1]), 
+                    verbose=False
+                )
 
         self.compile_verilog_header()
 
-    def compile_mem(self, weights, biases, compile_delta=False):
-        """Compile binary strings to be saved/transferred to the FPGA.
-        The addresses are delta encoded:
+    def determine_mem_depth(self, weights):
+        """Determine the biggest address change across a matrix.
         """
 
-        weights = np.transpose(weights)
-
-        # Determine the biggest address change across the whole matrix.
         max_delta = 0
-
         for row in weights:
             non_zero_indices = np.squeeze(np.nonzero(row))
             row_deltas = np.diff(non_zero_indices)
@@ -92,8 +129,15 @@ class DenseAira:
             current_max = non_zero_indices[0]
             max_delta = current_max if (current_max > max_delta) else max_delta
         
-        # Add one to the address number to allow for the 'all ones' row break code in hardware.
-        self.n_pre_addr = ceil(log2(max_delta + 1))
+        # Add two to the address number to allow for the 'all ones' row break code in hardware.
+        return ceil(log2(max_delta + 2))
+
+    def compile_mem(self, weights, biases):
+        """Compile binary strings to be saved/transferred to the FPGA.
+        The addresses are delta encoded:
+        """
+
+        
         self.n_memory = self.n_pre_addr + 1 + self.n_weight_mantissa + self.n_weight_exponent
         
         # Compile the weights.
@@ -113,10 +157,12 @@ class DenseAira:
             comp_weights.append(full_entry)
             
             if len(full_entry) != self.n_memory:
-                raise AiraException("Compiler Error: Binary strings are unequal.")
+                pass
+                #raise AiraException("Compiler Error: Binary strings are unequal.")
             
-            shifted_deltas = list(row_deltas[1:])
+            shifted_deltas = list(row_deltas)
             shifted_deltas.append(0)
+            #print("Shifted Deltas: {}".format(shifted_deltas))
 
             for delta, data_i in zip(shifted_deltas, non_zero_indices):
 
@@ -156,6 +202,21 @@ class DenseAira:
 
         return comp_weight + comp_addr
 
+    def verify_thread_validity(self, threads, neurons):
+        """Determine if the number of threads is able to be
+        realised in hardware.
+        """
+
+        threads_invalid = True
+        while threads_invalid:
+            if neurons % threads == 0:
+                threads_invalid = False
+            else:
+                print("{} threads cannot run {} neurons. Decreasing thread number...".format(threads, neurons))
+                threads -= 1
+        
+        return threads
+
     def compile_verilog_header(self):
         """Compile the parameters for the model into the Verilog header.
         """
@@ -180,8 +241,6 @@ class DenseAira:
         output_str = output_str.replace("<n_overflow>", str(self.n_overflow))
         output_str = output_str.replace("<mult_extra>", str(self.mult_extra))
 
-        mem_depth = len(self.comp_weights)
-        output_str = output_str.replace("<mem_depth>", str(mem_depth))
         output_str = output_str.replace("<n_delta>", str(self.n_pre_addr))
 
         if self.act_name == 'relu':
@@ -190,6 +249,7 @@ class DenseAira:
             act_code = "0"
         
         output_str = output_str.replace("<act_code>", act_code)
+        output_str = output_str.replace("<threads>", str(self.threads))
 
         output_str = output_str.replace("<i>", str(self.index))
 
@@ -201,6 +261,7 @@ class DenseAira:
         """
 
         output_str = open("aira_ml/sv_source/dense_wires.sv").read()
+        
         return output_str.replace("<i>", str(self.index))
 
     def compile_verilog_module(self):
@@ -209,4 +270,12 @@ class DenseAira:
         """
 
         output_str = open("aira_ml/sv_source/dense_module.sv").read()
+
+        self.mem_depths = self.mem_depths[::-1]
+        depth_list = str(self.mem_depths[0])
+        for depth_val in self.mem_depths[1:-1]:
+            depth_list += ", {}".format(depth_val)
+        depth_list += ", {}".format(self.mem_depths[-1]) 
+
+        output_str = output_str.replace("<thread-list>", depth_list)
         return output_str.replace("<i>", str(self.index))
