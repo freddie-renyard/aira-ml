@@ -8,5 +8,7 @@
     "exponent_growth": 0,
 
     "starting_mantissa": 4,
-    "starting_exponent": 4
+    "starting_exponent": 4,
+
+    "threads": 4
 }

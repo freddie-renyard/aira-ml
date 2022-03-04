@@ -28,15 +28,24 @@ class ModelCompiler:
         prev_man = params["starting_mantissa"]
         prev_exp = params["starting_exponent"]
 
-        # Make the first layer multithreaded
-        multithread = True
+        # Count the number of Dense layers, so that the last
+        # Dense layer index can be determined in the next stage.
+        layer_count = 0
+        for layer in model.layers:
+            if 'dense' in layer.name:
+                layer_count += 1
 
         index = 0
         for layer in model.layers:
             if 'dense' in layer.name:
                 
+                if index == (layer_count - 1):
+                    multithread = False
+                else:
+                    multithread = True
+
                 dense_obj, prev_man, prev_exp = cls.extract_dense(layer, index, prev_man, prev_exp, multithreading=multithread)
-                multithread = False
+                
                 aira_sequential.append(dense_obj)
 
                 index += 1
@@ -87,7 +96,7 @@ class ModelCompiler:
         out_exponent = n_in_exponent + params["exponent_growth"]
 
         if multithreading:
-            threads = 16
+            threads = params["threads"]
         else:
             threads = 1
         
