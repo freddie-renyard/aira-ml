@@ -275,7 +275,9 @@ class DenseAira:
         depth_list = str(self.mem_depths[0])
         for depth_val in self.mem_depths[1:-1]:
             depth_list += ", {}".format(depth_val)
-        depth_list += ", {}".format(self.mem_depths[-1]) 
+
+        if len(self.mem_depths) != 1:
+            depth_list += ", {}".format(self.mem_depths[-1]) 
 
         output_str = output_str.replace("<thread-list>", depth_list)
         return output_str.replace("<i>", str(self.index))

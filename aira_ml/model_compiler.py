@@ -84,7 +84,7 @@ class ModelCompiler:
 
         weights, biases = layer.get_weights()
 
-        weights = MatrixTools.threshold_matrix(weights, threshold=0.04, verbose=True)
+        weights = MatrixTools.threshold_matrix(weights, threshold=0.01, verbose=True)
         #MatrixTools.plot_histogram(weights)
 
         # Get the compiler parameters

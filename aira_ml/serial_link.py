@@ -19,6 +19,7 @@ class SerialLink:
             params = json.load(file)
 
         self.n_tx = ceil(params["input_bit_depth"] / 8) * 8
+        self.zero_pad = self.n_tx - params["input_bit_depth"]
 
         self.n_rx = ceil(params["output_bit_depth"] / 8) * 8
         self.n_output = params["output_bit_depth"]
@@ -133,11 +134,12 @@ class SerialLink:
         """
         
         # TODO Edit the length to support arbitrary lengths.
-        tx_data = Bits(bin="0000000"+tx_str)
-
+        zero_padding = "0" * self.zero_pad
+        tx_data = Bits(bin = zero_padding + tx_str)
+        
         try:
             self.serial_link.write(tx_data.bytes)
-            time.sleep(0.0002)
+            time.sleep(0.0002) 
         except:
             print("SERIAL: Data write failed.")
 
@@ -145,7 +147,6 @@ class SerialLink:
         """Receive data from the FPGA over the serial port.
         Returns the model's output tensor.
         """
-        
         
         rx_bytes = self.serial_link.read(size=self.bytes_to_rx)
         rx_data = BitArray(bytes=rx_bytes).bin
@@ -155,7 +156,7 @@ class SerialLink:
         flat_outputs = []
         for i in range(0, self.bits_to_rx, self.n_rx): 
 
-            data_raw = rx_data[i+5:i+self.n_rx]
+            data_raw = rx_data[i+self.zero_pad:i+self.n_rx]
             if self.code_data_out == 1:
                 rx_val = BinCompiler.decode_custom_float(
                     data_raw,
