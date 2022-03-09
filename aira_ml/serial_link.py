@@ -88,6 +88,7 @@ class SerialLink:
             self.serial_link = serial.Serial(self.port_name, baudrate=self.baud, timeout=1)
             try:
                 self.serial_link = serial.Serial(self.port_name, baudrate=self.baud)
+                self.reader = ReadLine(self.serial_link)
                 print('AIRA: Opened serial port to device at', self.port_name)
                 break
             except:
@@ -141,7 +142,6 @@ class SerialLink:
         tx_data = Bits(bin = zero_padding + tx_str)
         try:
             self.serial_link.write(tx_data.bytes)
-            time.sleep(0.000005) 
         except:
             print("SERIAL: Data write failed.")
 
@@ -150,7 +150,7 @@ class SerialLink:
         Returns the model's output tensor.
         """
         
-        rx_bytes = self.serial_link.read(size=self.bytes_to_rx)
+        rx_bytes = self.reader.readline(self.bytes_to_rx)
         rx_data = BitArray(bytes=rx_bytes).bin
 
         # Extract the binary from the serial string.
@@ -191,3 +191,21 @@ class SerialLink:
             return 0
         else:
             raise AiraException("Data format not recognised.")
+
+# This code is inspired by GitHub user skoehler's code from the 
+# following pyserial issue: https://github.com/pyserial/pyserial/issues/216
+class ReadLine:
+    def __init__(self, s):
+        self.s = s
+    
+    def readline(self, bytes_to_read):
+        
+        buf = bytearray()
+        buf_size = 0
+        while buf_size < bytes_to_read:
+            i = max(1, min(2048, self.s.in_waiting))
+            buf += self.s.read(i)
+            buf_size += i
+        
+        return buf
+            

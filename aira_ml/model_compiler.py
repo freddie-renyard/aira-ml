@@ -100,7 +100,6 @@ class ModelCompiler:
         else:
             threads = 1
 
-        
         # Create the Aira Dense object, which will compile the data to
         # the representations used in the FPGA.
         dense_obj = DenseAira(

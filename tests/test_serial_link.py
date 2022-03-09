@@ -8,6 +8,7 @@ from matplotlib import pyplot as plt
 from tensorflow.keras.models import load_model
 from tensorflow.keras import Model
 from aira_ml.tools.binary_tools import BinCompiler
+import time
 
 def send_image_internal():
     """ Input an image into the serial link and decode it to
@@ -73,36 +74,14 @@ def evaluate_inference(trials):
         # Normalise input image.
         test_data = (x_test[i:i+1] / 256.0) + np.expand_dims(np.random.rand(28,28), axis=0)*0
 
-        
-
-        """
-        # Get the outputs of the intermediate layer
-        intermediate_layer_model = Model(inputs=model.input, outputs=model.get_layer('dense_0').output)
-        intermediate_output = intermediate_layer_model.predict(test_input)[0]
-        """
-
-        #print(model.get_layer('dense_1').bias)
-
-        # The biases (when zero weights are hardcoded in) alternate between right and wrong - second, fourth
-        # correct etc. - pattern?
-
         # Compute Tensorflow output.
         tf_inference = model.predict(test_data)
 
         # Get inference from the FPGA.
         aira_inference = link.get_inference(test_data)
 
-        plt.subplot(1,2,2)
-        plt.imshow(test_data[0])
-        plt.title("Image")
-        plt.axis('off')
-
-        plt.show()
-
         # Threshold the floating point errors
         aira_inference = aira_inference * (aira_inference > (10**-8))
-        #print([round(x, 2) for x in list(aira_inference)])
-        #print([round(x, 2) for x in list(np.squeeze(tf_inference))])
 
         actual_number = y_test[i]
         tf_number = int(np.argmax(tf_inference))
@@ -135,5 +114,18 @@ def evaluate_inference(trials):
         )
     )
 
+def evaluate_uart_speed(trials):
+    
+    (_, _), (x_test, _) = mnist.load_data()
+    link = SerialLink()
+    start_time = time.time()
+
+    for i in range(trials):
+        test_data = (x_test[i:i+1] / 256.0)
+        aira_inference = link.get_inference(test_data)
+    
+    end_time = time.time()
+    print("Complete: {} ms per inference".format((end_time - start_time)*1000/trials))
+
 if __name__ == "__main__":
-    evaluate_inference(300)
+    evaluate_inference(20)
