@@ -136,7 +136,6 @@ class DenseAira:
         """Compile binary strings to be saved/transferred to the FPGA.
         The addresses are delta encoded:
         """
-
         
         self.n_memory = self.n_pre_addr + 1 + self.n_weight_mantissa + self.n_weight_exponent
         
@@ -148,7 +147,7 @@ class DenseAira:
         comp_weights.append(full_entry)
 
         for row, bias in zip(weights, biases):
-
+                        
             non_zero_indices = np.squeeze(np.nonzero(row))
             row_deltas = np.squeeze(np.diff(non_zero_indices))
 
@@ -157,8 +156,7 @@ class DenseAira:
             comp_weights.append(full_entry)
             
             if len(full_entry) != self.n_memory:
-                pass
-                #raise AiraException("Compiler Error: Binary strings are unequal.")
+                raise AiraException("Compiler Error: Binary strings are unequal.")
             
             shifted_deltas = list(row_deltas)
             shifted_deltas.append(0)
@@ -167,7 +165,7 @@ class DenseAira:
             for delta, data_i in zip(shifted_deltas, non_zero_indices):
 
                 data_weight = row[data_i]
-
+                
                 # Signals the end of the row. Compile the row break signal (all ones)
                 if delta == 0:
                     comp_weight = BinCompiler.compile_to_float(

@@ -1,10 +1,10 @@
 {
-    "weight_mantissa": 4,
+    "weight_mantissa": 2,
     "weight_exponent": 3,
-    "mult_extra": 3,
+    "mult_extra": 2,
     "n_overflow": 1,
 
-    "mantissa_growth": 0,
+    "mantissa_growth": 1,
     "exponent_growth": 1,
 
     "starting_mantissa": 4,

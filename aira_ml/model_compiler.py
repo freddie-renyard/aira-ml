@@ -84,7 +84,7 @@ class ModelCompiler:
 
         weights, biases = layer.get_weights()
 
-        weights = MatrixTools.threshold_matrix(weights, threshold=0.01, verbose=True)
+        weights = MatrixTools.threshold_matrix(weights, threshold=0.1, verbose=True)
         #MatrixTools.plot_histogram(weights)
 
         # Get the compiler parameters
@@ -99,6 +99,7 @@ class ModelCompiler:
             threads = params["threads"]
         else:
             threads = 1
+
         
         # Create the Aira Dense object, which will compile the data to
         # the representations used in the FPGA.

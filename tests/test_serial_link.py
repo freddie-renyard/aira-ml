@@ -1,10 +1,13 @@
 from cgi import test
 from timeit import repeat
+from tokenize import Triple
 from aira_ml.serial_link import SerialLink
 import numpy as np
 from tensorflow.keras.datasets import mnist
 from matplotlib import pyplot as plt
 from tensorflow.keras.models import load_model
+from tensorflow.keras import Model
+from aira_ml.tools.binary_tools import BinCompiler
 
 def send_image_internal():
     """ Input an image into the serial link and decode it to
@@ -68,13 +71,38 @@ def evaluate_inference(trials):
     for i in range(trials):
 
         # Normalise input image.
-        test_data = x_test[i:i+1] / 256.0
+        test_data = (x_test[i:i+1] / 256.0) + np.expand_dims(np.random.rand(28,28), axis=0)*0
+
+        
+
+        """
+        # Get the outputs of the intermediate layer
+        intermediate_layer_model = Model(inputs=model.input, outputs=model.get_layer('dense_0').output)
+        intermediate_output = intermediate_layer_model.predict(test_input)[0]
+        """
+
+        #print(model.get_layer('dense_1').bias)
+
+        # The biases (when zero weights are hardcoded in) alternate between right and wrong - second, fourth
+        # correct etc. - pattern?
 
         # Compute Tensorflow output.
         tf_inference = model.predict(test_data)
 
         # Get inference from the FPGA.
         aira_inference = link.get_inference(test_data)
+
+        plt.subplot(1,2,2)
+        plt.imshow(test_data[0])
+        plt.title("Image")
+        plt.axis('off')
+
+        plt.show()
+
+        # Threshold the floating point errors
+        aira_inference = aira_inference * (aira_inference > (10**-8))
+        #print([round(x, 2) for x in list(aira_inference)])
+        #print([round(x, 2) for x in list(np.squeeze(tf_inference))])
 
         actual_number = y_test[i]
         tf_number = int(np.argmax(tf_inference))
@@ -88,8 +116,9 @@ def evaluate_inference(trials):
             concordance += 1
         
         print(
-            "Actual Output {} FPGA {} TensorFlow {} MSE: {}"
+            "TRIAL {} Actual Output {} FPGA {} TensorFlow {} MSE: {}"
             .format(
+                i,
                 actual_number, 
                 aira_number,
                 tf_number,
@@ -100,11 +129,11 @@ def evaluate_inference(trials):
     print(
         "End of test: \n\t FPGA accuracy {} \n\t TensorFlow Accuracy {} \n\t FPGA-Tensorflow concordance {}"
         .format(
-            round((aira_correct / trials), 2),
-            round((tf_correct / trials), 2),
-            round((concordance / trials), 2)
+            (aira_correct / trials),
+            (tf_correct / trials),
+            (concordance / trials)
         )
     )
 
 if __name__ == "__main__":
-    evaluate_inference(20)
+    evaluate_inference(300)

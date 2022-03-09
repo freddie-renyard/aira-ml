@@ -19,10 +19,11 @@ class SerialLink:
             params = json.load(file)
 
         self.n_tx = ceil(params["input_bit_depth"] / 8) * 8
-        self.zero_pad = self.n_tx - params["input_bit_depth"]
+        self.tx_zero_pad = self.n_tx - params["input_bit_depth"]
 
         self.n_rx = ceil(params["output_bit_depth"] / 8) * 8
         self.n_output = params["output_bit_depth"]
+        self.rx_zero_pad = self.n_rx - self.n_output
 
         self.tx_num = params["input_number"]
         self.rx_num = params["output_number"]
@@ -79,7 +80,7 @@ class SerialLink:
         print("AIRA: Attempting to open serial port...")
         
         # Define the number of connection attempts
-        rest_interval = 1
+        rest_interval = 1 
         max_attempts = timeout // rest_interval
         attempts = 0
         
@@ -127,6 +128,7 @@ class SerialLink:
                     self.n_in_man,
                     self.n_in_exp
                 )
+
                 self.tx_bin_str(bin_val)
 
     def tx_bin_str(self, tx_str):
@@ -134,12 +136,12 @@ class SerialLink:
         """
         
         # TODO Edit the length to support arbitrary lengths.
-        zero_padding = "0" * self.zero_pad
-        tx_data = Bits(bin = zero_padding + tx_str)
+        zero_padding = "0" * self.tx_zero_pad
         
+        tx_data = Bits(bin = zero_padding + tx_str)
         try:
             self.serial_link.write(tx_data.bytes)
-            time.sleep(0.0002) 
+            time.sleep(0.000005) 
         except:
             print("SERIAL: Data write failed.")
 
@@ -155,8 +157,8 @@ class SerialLink:
         # Start at the end of the string, as this is the first value.
         flat_outputs = []
         for i in range(0, self.bits_to_rx, self.n_rx): 
-
-            data_raw = rx_data[i+self.zero_pad:i+self.n_rx]
+            
+            data_raw = rx_data[i+self.rx_zero_pad:i+self.n_rx]
             if self.code_data_out == 1:
                 rx_val = BinCompiler.decode_custom_float(
                     data_raw,

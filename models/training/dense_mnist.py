@@ -13,7 +13,7 @@ x_test = x_test.astype("float32") / 255.0
 
 model = tf.keras.models.Sequential([
   tf.keras.layers.Flatten(input_shape=(28, 28)),
-  tf.keras.layers.Dense(128, activation='relu'),
+  tf.keras.layers.Dense(128, activation='relu'), 
   tf.keras.layers.Dense(10, activation='relu')
 ])
 
@@ -33,7 +33,5 @@ model.fit(
     validation_split=0.1
 )
 
-import numpy as np
-print(np.shape(x_test[0:1]))
-model.predict(x_test[0:1])
+#intermediate_layer_model = tf.keras.Model(inputs=model.input, outputs=model.get_layer('dense').output)
 model.save('models/dense_mnist/model')
