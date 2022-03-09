@@ -206,6 +206,5 @@ class ReadLine:
             i = max(1, min(2048, self.s.in_waiting))
             buf += self.s.read(i)
             buf_size += i
-        
         return buf
             

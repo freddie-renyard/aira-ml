@@ -128,4 +128,4 @@ def evaluate_uart_speed(trials):
     print("Complete: {} ms per inference".format((end_time - start_time)*1000/trials))
 
 if __name__ == "__main__":
-    evaluate_inference(20)
+    evaluate_inference(100)
