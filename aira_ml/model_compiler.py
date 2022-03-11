@@ -2,7 +2,7 @@ import tensorflow as tf
 import numpy as np
 from matplotlib import pyplot as plt
 from aira_ml.tools.matrix_tools import MatrixTools
-from aira_ml.aira_objects import DenseAira
+from aira_ml.aira_objects import Conv2DAira, DenseAira
 import json
 import os
 from subprocess import check_call
@@ -146,7 +146,7 @@ class ModelCompiler:
         # Default the number of threads to be the number of filters.
         threads = np.shape(weight_tensor)[3]
 
-        conv_obj = DenseAira(
+        conv_obj = Conv2DAira(
             index           = index,
             weights         = weight_tensor,
             biases          = bias_tensor, 

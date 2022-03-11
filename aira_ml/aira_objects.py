@@ -290,4 +290,33 @@ class Conv2DAira:
         n_overflow, mult_extra,
         threads):
 
+        self.index = index
+        
+        # Ensure that the activation function used in the layer has
+        # hardware support.
+        self.act_name = None
+        if act_name == 'relu':
+            self.act_name = act_name
+        else:
+            raise AiraException("Unsupported function found in a Dense layer: {}".format(act_name))
+
+        # Reshape the weights to simplify the compiler methods.
+        weight_shape =  np.shape(weights)
+        weight_new_shape = (weight_shape[0]**2, weight_shape[3])
+        self.weights = np.array(weights).reshape(weight_new_shape)
+        self.weights = np.transpose(self.weights)
+        
+        # Compile the filters and the biases.
+        self.comp_filters = []
+
+        for filter_data in zip(self.weights, np.array(biases)):
+            compiled_lst = self.compile_filter(filter_data[0], filter_data[1])
+            self.comp_filters.append(compiled_lst)
+
+    def compile_filter(self, weights, bias):
+        """Compiles filter data into a list of binary strings.
+        NB the bias is compiled last to facilitate easier hardware
+        support for RGB images.
+        """
         pass
+        
