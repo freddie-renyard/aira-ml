@@ -51,6 +51,8 @@ class ModelCompiler:
                 index += 1
             elif 'flatten' in layer.name:
                 cls.extract_flatten(layer)
+            elif 'conv2d' in layer.name:
+                cls.extract_conv2d(layer, prev_man, prev_exp)
 
         # Extract the shape of the output tensor from the last layer.
         shape = np.array(layer.output_shape)
@@ -84,7 +86,7 @@ class ModelCompiler:
 
         weights, biases = layer.get_weights()
 
-        weights = MatrixTools.threshold_matrix(weights, threshold=0.1, verbose=True)
+        weights = MatrixTools.threshold_matrix(weights, threshold=0.05, verbose=True)
         #MatrixTools.plot_histogram(weights)
 
         # Get the compiler parameters
@@ -119,6 +121,48 @@ class ModelCompiler:
         )
 
         return dense_obj, out_mantissa, out_exponent
+
+    @classmethod
+    def extract_conv2d(cls, layer, n_in_mantissa, n_in_exponent, index=0):
+        """Extract parameters from a convolutional layer.
+        Will be expanded to support optimisations such as
+        combination with max pooling layers and input tiling.
+        """
+
+        if layer.kernel_size[0] != layer.kernel_size[1]:
+            raise AiraException("Only square kernels are currently supported in hardware.")
+
+        weight_tensor = layer.weights[0]
+        bias_tensor = layer.bias
+
+        # Get the compiler parameters
+        with open("aira_ml/config/compiler_config.json") as file:
+            params = json.load(file)
+
+        # Determine the output depths
+        out_mantissa = n_in_mantissa + params["mantissa_growth"]
+        out_exponent = n_in_exponent + params["exponent_growth"]
+
+        # Default the number of threads to be the number of filters.
+        threads = np.shape(weight_tensor)[3]
+
+        conv_obj = DenseAira(
+            index           = index,
+            weights         = weight_tensor,
+            biases          = bias_tensor, 
+            act_name        = layer.activation.__qualname__,
+            n_input_mantissa= n_in_mantissa,
+            n_input_exponent= n_in_exponent,
+            n_weight_mantissa= params["weight_mantissa"],
+            n_weight_exponent= params["weight_exponent"],
+            n_output_mantissa= out_mantissa,
+            n_output_exponent= out_exponent,
+            n_overflow       = params["n_overflow"],
+            mult_extra       = params["mult_extra"],
+            threads          = threads
+        )
+
+        return conv_obj, out_mantissa, out_exponent
 
     @classmethod
     def extract_flatten(cls, layer, index=0):
@@ -295,4 +339,4 @@ class ModelCompiler:
 
         check_call(script_path.format(server_path, server_addr, vivado_loc, project_path), shell=True)
     
-ModelCompiler.compile_tf_model("models/dense_mnist/model")
+ModelCompiler.compile_tf_model("models/conv_mnist/model")

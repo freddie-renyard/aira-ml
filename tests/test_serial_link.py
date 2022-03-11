@@ -54,7 +54,7 @@ def compute_mse(arr_1, arr_2):
 
     return np.sum(output) / np.shape(output)[0]
 
-def evaluate_inference(trials):
+def evaluate_inference(trials, show_img=False):
     
     # Load the actual ML model
     path_to_model = "models/dense_mnist/model"
@@ -82,6 +82,11 @@ def evaluate_inference(trials):
 
         # Threshold the floating point errors
         aira_inference = aira_inference * (aira_inference > (10**-8))
+
+        if show_img:
+            plt.imshow(test_data[0])
+            plt.axis('off')
+            plt.show()
 
         actual_number = y_test[i]
         tf_number = int(np.argmax(tf_inference))
@@ -128,4 +133,4 @@ def evaluate_uart_speed(trials):
     print("Complete: {} ms per inference".format((end_time - start_time)*1000/trials))
 
 if __name__ == "__main__":
-    evaluate_inference(100)
+    evaluate_inference(6, show_img=True)

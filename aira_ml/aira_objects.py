@@ -279,3 +279,15 @@ class DenseAira:
 
         output_str = output_str.replace("<thread-list>", depth_list)
         return output_str.replace("<i>", str(self.index))
+
+class Conv2DAira:
+
+    # TODO Make these Aira objects children of a parent class
+    def __init__(self, index, weights, biases, act_name, 
+        n_input_mantissa, n_input_exponent,
+        n_weight_mantissa, n_weight_exponent,
+        n_output_mantissa, n_output_exponent,
+        n_overflow, mult_extra,
+        threads):
+
+        pass

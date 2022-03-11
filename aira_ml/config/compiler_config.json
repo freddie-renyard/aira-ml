@@ -1,6 +1,6 @@
 {
-    "weight_mantissa": 2,
-    "weight_exponent": 3,
+    "weight_mantissa": 4,
+    "weight_exponent": 4,
     "mult_extra": 2,
     "n_overflow": 1,
 
