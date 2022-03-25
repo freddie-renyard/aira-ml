@@ -301,16 +301,25 @@ class Conv2DAira:
             raise AiraException("Unsupported function found in a Dense layer: {}".format(act_name))
 
         # Reshape the weights to simplify the compiler methods.
+        # Target shape - (n,n, in_filters, out_filters)
         weight_shape =  np.shape(weights)
-        weight_new_shape = (weight_shape[0]**2, weight_shape[3])
-        self.weights = np.array(weights).reshape(weight_new_shape)
-        self.weights = np.transpose(self.weights)
+        self.weights = np.array(weights)
+        
+        # Get the number of 'channels' of the input tensor.
+        # This is used to determine how many threads are 
+        # computing the inner product in the each filter computation.
+        self.pre_filters = np.shape(self.weights)[2]
+        print(self.pre_filters)
         
         # Compile the filters and the biases.
         self.comp_filters = []
-
-        for filter_data in zip(self.weights, np.array(biases)):
-            compiled_lst = self.compile_filter(filter_data[0], filter_data[1])
+    
+        for i in range(self.pre_filters):
+            
+            # TODO Confirm that this tensor has been flattened appropriately.
+            flat_weights = self.weights[:,:,i,:].flatten()
+            print(np.shape(flat_weights))
+            compiled_lst = self.compile_filter(flat_weights, biases[i])
             self.comp_filters.append(compiled_lst)
 
     def compile_filter(self, weights, bias):

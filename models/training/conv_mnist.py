@@ -22,7 +22,7 @@ x_test = np.expand_dims(x_test, axis=3)
 model = tf.keras.models.Sequential([
     Conv2D(6, (3,3), padding='valid', activation='relu'),
     MaxPooling2D(pool_size=(2,2)),
-    Conv2D(6, (3,3), padding='valid', activation='relu'),
+    Conv2D(8, (3,3), padding='valid', activation='relu'),
     MaxPooling2D(pool_size=(2,2)),
     Flatten(),
     Dense(128, activation='relu'),
