@@ -2,7 +2,7 @@ import tensorflow as tf
 from tensorflow.keras.layers import Conv2D, MaxPooling2D, Dense, Flatten
 
 # Construct a simple 2D convolutional model for testing.
-input_shape = (9,9,1)
+input_shape = (3, 3, 4)
 model = tf.keras.models.Sequential([
     Conv2D(6, (3,3), padding='valid', activation='relu', input_shape=input_shape)
 ])

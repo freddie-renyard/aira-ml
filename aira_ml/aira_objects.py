@@ -288,7 +288,8 @@ class Conv2DAira:
         n_weight_mantissa, n_weight_exponent,
         n_output_mantissa, n_output_exponent,
         n_overflow, mult_extra,
-        threads):
+        conv_threads, channel_threads 
+        ):
 
         self.index = index
         
@@ -308,55 +309,65 @@ class Conv2DAira:
         # Target shape - (n,n, in_filters, out_filters)
         weight_shape =  np.shape(weights)
         self.weights = np.array(weights)
-        
+        self.pre_channels = weight_shape[2]
+        self.filters = weight_shape[3]
+
+        self.conv_threads = conv_threads
+
+        interlaced_filters = [[] for _ in range(conv_threads)]
+        interlaced_biases = [[] for _ in range(conv_threads)]
+
+        for i in range(self.filters):
+            interlaced_filters[i % conv_threads].append(self.weights[:,:,:,i])
+            interlaced_biases[i % conv_threads].append(biases[i])
+
+        # TODO Add inner product (channel) multithreading compilation capabilities.
+
+        self.compile_filter_thread(interlaced_filters, interlaced_biases)
+
+    def compile_filter_thread(self, sliced_weights, biases):
+        """Compiles and saves a tensor in the appropriate format for
+        hardware interpretation.
+        """
+
         # Get the number of 'channels' of the input tensor.
         # This is used to determine how many threads are 
         # computing the inner product in the each filter computation.
-        self.pre_filters = weight_shape[2]
-        self.post_filters = weight_shape[3]
-        print(weight_shape)
+        
+        sliced_weights = np.array(sliced_weights)
+        sliced_weights_shape = np.shape(sliced_weights)
+        print(sliced_weights_shape)
 
-        compiled_biases = []
-        for i in range(self.post_filters):
+        for w in range(self.conv_threads):
+
+            compiled_params = []
+            for i in range(self.filters // self.conv_threads):
+
+                compiled_bias = BinCompiler.compile_to_float(
+                    np.array(biases[w][i]),
+                    self.n_weight_mantissa,
+                    self.n_weight_exponent
+                )
+                compiled_params.append(compiled_bias)
+
+                for j in range(self.pre_channels):
+
+                    # Flatten the weight tensor
+                    flat_weights = sliced_weights[w, i, :, :, j].flatten()
+
+                    # Compile each weight to the target binary format
+                    for weight in flat_weights:
+                        comp_weight = BinCompiler.compile_to_float(
+                            weight,
+                            self.n_weight_mantissa,
+                            self.n_weight_exponent
+                        )
+                        compiled_params.append(comp_weight)
             
-            # TODO Confirm that this tensor has been flattened appropriately.
-            flat_weights = self.weights[:,:,:,i].flatten()
-            compiled_weights, compiled_bias = self.compile_filter(flat_weights, biases[i])
-
             Filetools.save_to_file(
-                "conv_weights_{}_thread_{}".format(index, i), 
-                compiled_weights,
-                verbose=True
+                "conv_params_{}_thread_{}".format(self.index, str(w)),
+                compiled_params
             )
 
-            compiled_biases.append(compiled_bias)
-
-        Filetools.save_to_file(
-            "conv_biases_{}".format(index),
-            compiled_biases,
-            verbose=True
-        )
-
-    def compile_filter(self, weights, bias):
-        """Compiles filter data into a list of binary strings.
-        """
-
-        compiled_weights = []
-        for weight in weights:
-            comp_weight = BinCompiler.compile_to_float(
-                weight,
-                self.n_weight_mantissa,
-                self.n_weight_exponent
-            )
-
-            compiled_weights.append(comp_weight)
-        
-        compiled_bias = BinCompiler.compile_to_float(
-            np.array(bias),
-            self.n_weight_mantissa,
-            self.n_weight_exponent
-        )
-        return compiled_weights, compiled_bias
-        
         
         

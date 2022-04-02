@@ -144,9 +144,6 @@ class ModelCompiler:
         out_mantissa = n_in_mantissa + params["mantissa_growth"]
         out_exponent = n_in_exponent + params["exponent_growth"]
 
-        # Default the number of threads to be the number of filters.
-        threads = np.shape(weight_tensor)[3]
-
         conv_obj = Conv2DAira(
             index           = index,
             weights         = weight_tensor,
@@ -160,7 +157,8 @@ class ModelCompiler:
             n_output_exponent= out_exponent,
             n_overflow       = params["n_overflow"],
             mult_extra       = params["mult_extra"],
-            threads          = threads
+            conv_threads     = 3,
+            channel_threads  = 1 
         )
 
         return conv_obj, out_mantissa, out_exponent
