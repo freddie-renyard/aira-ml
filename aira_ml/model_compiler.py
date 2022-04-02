@@ -52,7 +52,8 @@ class ModelCompiler:
             elif 'flatten' in layer.name:
                 cls.extract_flatten(layer)
             elif 'conv2d' in layer.name:
-                cls.extract_conv2d(layer, prev_man, prev_exp)
+                cls.extract_conv2d(layer, prev_man, prev_exp, index=index)
+                index += 1
 
         # Extract the shape of the output tensor from the last layer.
         shape = np.array(layer.output_shape)
@@ -123,7 +124,7 @@ class ModelCompiler:
         return dense_obj, out_mantissa, out_exponent
 
     @classmethod
-    def extract_conv2d(cls, layer, n_in_mantissa, n_in_exponent, index=0):
+    def extract_conv2d(cls, layer, n_in_mantissa, n_in_exponent, index):
         """Extract parameters from a convolutional layer.
         Will be expanded to support optimisations such as
         combination with max pooling layers and input tiling.

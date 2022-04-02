@@ -300,6 +300,10 @@ class Conv2DAira:
         else:
             raise AiraException("Unsupported function found in a Dense layer: {}".format(act_name))
 
+        # Assign binary parameters
+        self.n_weight_mantissa = n_weight_mantissa
+        self.n_weight_exponent = n_weight_exponent
+
         # Reshape the weights to simplify the compiler methods.
         # Target shape - (n,n, in_filters, out_filters)
         weight_shape =  np.shape(weights)
@@ -308,24 +312,51 @@ class Conv2DAira:
         # Get the number of 'channels' of the input tensor.
         # This is used to determine how many threads are 
         # computing the inner product in the each filter computation.
-        self.pre_filters = np.shape(self.weights)[2]
-        print(self.pre_filters)
-        
-        # Compile the filters and the biases.
-        self.comp_filters = []
-    
-        for i in range(self.pre_filters):
+        self.pre_filters = weight_shape[2]
+        self.post_filters = weight_shape[3]
+        print(weight_shape)
+
+        compiled_biases = []
+        for i in range(self.post_filters):
             
             # TODO Confirm that this tensor has been flattened appropriately.
-            flat_weights = self.weights[:,:,i,:].flatten()
-            print(np.shape(flat_weights))
-            compiled_lst = self.compile_filter(flat_weights, biases[i])
-            self.comp_filters.append(compiled_lst)
+            flat_weights = self.weights[:,:,:,i].flatten()
+            compiled_weights, compiled_bias = self.compile_filter(flat_weights, biases[i])
+
+            Filetools.save_to_file(
+                "conv_weights_{}_thread_{}".format(index, i), 
+                compiled_weights,
+                verbose=True
+            )
+
+            compiled_biases.append(compiled_bias)
+
+        Filetools.save_to_file(
+            "conv_biases_{}".format(index),
+            compiled_biases,
+            verbose=True
+        )
 
     def compile_filter(self, weights, bias):
         """Compiles filter data into a list of binary strings.
-        NB the bias is compiled last to facilitate easier hardware
-        support for RGB images.
         """
-        pass
+
+        compiled_weights = []
+        for weight in weights:
+            comp_weight = BinCompiler.compile_to_float(
+                weight,
+                self.n_weight_mantissa,
+                self.n_weight_exponent
+            )
+
+            compiled_weights.append(comp_weight)
+        
+        compiled_bias = BinCompiler.compile_to_float(
+            np.array(bias),
+            self.n_weight_mantissa,
+            self.n_weight_exponent
+        )
+        return compiled_weights, compiled_bias
+        
+        
         
