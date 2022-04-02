@@ -14,5 +14,4 @@ model.compile(
 )
 
 model.summary()
-
 model.save('models/conv_test_2D/model')

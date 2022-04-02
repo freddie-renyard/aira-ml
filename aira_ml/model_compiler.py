@@ -340,4 +340,4 @@ class ModelCompiler:
 
         check_call(script_path.format(server_path, server_addr, vivado_loc, project_path), shell=True)
     
-ModelCompiler.compile_tf_model("models/conv_mnist/model")
+ModelCompiler.compile_tf_model("models/conv_test_2D/model")
