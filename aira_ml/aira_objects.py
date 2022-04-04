@@ -104,7 +104,6 @@ class DenseAira:
             # Compile the data. TODO Combine with above loop.
             for thread_i, data in enumerate(zip(weights_interlaced, biases_interlaced)):
                 compiled_weights = self.compile_mem(data[0], data[1])
-                print(len(compiled_weights))
                 self.mem_depths.append(len(compiled_weights))
                 Filetools.save_to_file(
                     "dense_weights_{}_thread_{}".format(index, thread_i), 

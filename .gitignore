@@ -3,5 +3,6 @@ __pycache__
 aira_ml/tools/__pycache__
 tests/pycache/
 aira_ml/cache
+aira_ml/rx_cache
 notes.txt
 aira_ml/config/server_config.json

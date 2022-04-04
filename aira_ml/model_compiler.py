@@ -19,6 +19,8 @@ class ModelCompiler:
         model = tf.keras.models.load_model(path_to_model)
         model.summary()
 
+        print("\nDELTA: Compiling hardware...\n")
+
         aira_sequential = []
 
         # Get the compiler parameters
@@ -157,7 +159,7 @@ class ModelCompiler:
             n_output_exponent= out_exponent,
             n_overflow       = params["n_overflow"],
             mult_extra       = params["mult_extra"],
-            conv_threads     = 3,
+            conv_threads     = 1,
             channel_threads  = 1 
         )
 
@@ -325,6 +327,8 @@ class ModelCompiler:
         """Transfers the contents of the cache to the synthesis server.
         """
 
+        print("\nDELTA: Uploading data to server...\n")
+
         with open("aira_ml/config/server_config.json") as file:
             server_config = json.load(file)
 
@@ -334,8 +338,18 @@ class ModelCompiler:
         server_addr = server_config["ssh_addr"]
         vivado_loc = server_config["vivado_loc"]
         project_path = server_config["project_loc"]
-        script_path = cwd + "/aira_ml/file_transfer.sh {} {} {} {}"
 
-        check_call(script_path.format(server_path, server_addr, vivado_loc, project_path), shell=True)
+        bitstream_path = server_config["bitstream_loc"]
+        script_path = cwd + "/aira_ml/file_transfer.sh {} {} {} {} {}"
+
+        check_call(script_path.format(
+            server_path, 
+            server_addr, 
+            vivado_loc, 
+            project_path,
+            bitstream_path
+        ), shell=True)
+
+        print("\nDELTA: Hardware synthesis completed.")
     
-ModelCompiler.compile_tf_model("models/conv_test_2D/model")
+ModelCompiler.compile_tf_model("models/dense_mnist/model")

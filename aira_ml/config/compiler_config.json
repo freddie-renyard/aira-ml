@@ -10,5 +10,5 @@
     "starting_mantissa": 4,
     "starting_exponent": 4,
 
-    "threads": 1
+    "threads": 4
 }

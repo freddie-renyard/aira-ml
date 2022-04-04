@@ -15,7 +15,6 @@ class Filetools:
         """
 
         path = cls.open_cache(filename)
-        print(path)
         file = open(path, "w")
 
         for i, element in enumerate(target_list):

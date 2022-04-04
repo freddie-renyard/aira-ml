@@ -6,6 +6,7 @@
 # 2nd arg - SSH call string e.g. user:x.x.x.x
 # 3rd arg - Path to Vivado executable on server
 # 4th arg - Path to project on host machine.
+# 5th arg - Path to bitstream file on server
 
 echo "Beginning parameter file transfer to Vivado host machine..."
 
@@ -20,3 +21,7 @@ rsync -a -v --stats --progress $FINALPATH $2:$1
 # Run the Vivado execution script on the host machine; pass the necessary filepaths as arguments
 NEXTSCRIPTPATH="${SCRIPTPATH}/run_vivado.sh"
 ssh $2 "bash -s" < $NEXTSCRIPTPATH $3 $4 
+
+RXCACHEPATH="$SCRIPTPATH/rx_cache/"
+
+scp $2:$5 $RXCACHEPATH

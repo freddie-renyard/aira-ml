@@ -10,6 +10,10 @@ from tensorflow.keras import Model
 from aira_ml.tools.binary_tools import BinCompiler
 import time
 
+import os
+from subprocess import check_call
+
+
 def send_image_internal():
     """ Input an image into the serial link and decode it to
     test the serial link's encoder and decoder, in the absence
@@ -55,6 +59,8 @@ def compute_mse(arr_1, arr_2):
     return np.sum(output) / np.shape(output)[0]
 
 def evaluate_inference(trials, show_img=False):
+
+    print("\nDELTA: Testing MNIST inference...\n")
     
     # Load the actual ML model
     path_to_model = "models/dense_mnist/model"
@@ -133,4 +139,12 @@ def evaluate_uart_speed(trials):
     print("Complete: {} ms per inference".format((end_time - start_time)*1000/trials))
 
 if __name__ == "__main__":
+
+    print("\nDELTA: Loading the configuration file onto the FPGA...\n")
+
+    # Load the bitstream file onto the FPGA.
+    cwd = os.getcwd()
+    script_path = cwd + "/aira_ml/fpga_load.sh"
+    check_call(script_path, shell=True)
+
     evaluate_inference(6, show_img=True)
