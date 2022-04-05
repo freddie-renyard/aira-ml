@@ -147,4 +147,14 @@ if __name__ == "__main__":
     script_path = cwd + "/aira_ml/fpga_load.sh"
     check_call(script_path, shell=True)
 
-    evaluate_inference(6, show_img=True)
+    try:
+        evaluate_inference(10, show_img=True)
+    except:
+        while True:
+            try:
+                check_call(script_path, shell=True)
+                break
+            except:
+                print("FPGA not found.")
+                
+        evaluate_inference(10, show_img=True)

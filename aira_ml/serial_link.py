@@ -85,7 +85,6 @@ class SerialLink:
         attempts = 0
         
         while True: 
-            self.serial_link = serial.Serial(self.port_name, baudrate=self.baud, timeout=1)
             try:
                 self.serial_link = serial.Serial(self.port_name, baudrate=self.baud)
                 self.reader = ReadLine(self.serial_link)
@@ -135,7 +134,7 @@ class SerialLink:
     def tx_bin_str(self, tx_str):
         """Write bits to the serial port.
         """
-        
+
         # TODO Edit the length to support arbitrary lengths.
         zero_padding = "0" * self.tx_zero_pad
         
@@ -143,13 +142,13 @@ class SerialLink:
         try:
             self.serial_link.write(tx_data.bytes)
         except:
-            print("SERIAL: Data write failed.")
-
+            print("SERIAL: Data write failed. Re-acquiring connection...")
+            
     def receive_data(self):
         """Receive data from the FPGA over the serial port.
         Returns the model's output tensor.
         """
-        
+
         rx_bytes = self.reader.readline(self.bytes_to_rx)
         rx_data = BitArray(bytes=rx_bytes).bin
 
