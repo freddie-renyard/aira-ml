@@ -375,6 +375,53 @@ class Conv2DMaxPoolAira:
         n_overflow, mult_extra,
         filter_threads, rowcol_threads, channel_threads
         ):
+
+        # Determine datapath parameters.
+        self.weight_params = {
+            'n_man': n_weight_mantissa,
+            'n_exp': n_weight_exponent,
+            'n_data': 1 + n_weight_exponent + n_weight_mantissa
+        }
+
+        self.input_params = {
+            'n_man': n_input_mantissa,
+            'n_exp': n_input_exponent,
+            'n_data': 1 + n_input_exponent + n_input_mantissa
+        }
+
+        self.alu_params = {
+            'mult_extra': mult_extra,
+            'n_overflow': n_overflow
+        }
+
+        self.output_params = {
+            'n_man': n_output_mantissa,
+            'n_exp': n_output_exponent,
+            'n_data': 1 + n_output_exponent + n_output_mantissa
+        }
         
         # Determine the parallelisation parameters.
+        self.filter_threads = filter_threads # The number of threads used to compute the filter
+        self.rowcol_threads = rowcol_threads # The number of threads used within each convolution on an image
+
+        prelayer_channels = np.shape(filters)[2]
+        if channel_threads is not None:
+            if channel_threads != prelayer_channels:
+                raise AiraException("The number of channel threads must be the same as the number of channels in the input tensor ({}).".format(prelayer_channels))
+
+        self.channel_threads = prelayer_channels
+
+        # Ensure that the activation function used in the layer has
+        # hardware support.
+        self.act_name = None
+        if act_name == 'relu':
+            self.act_name = act_name
+        else:
+            raise AiraException("Unsupported function found in a Dense layer: {}".format(act_name))
+
+        # Compile filters.
+
+        # Compile biases. 
+
+    def compile_filters():
         pass
