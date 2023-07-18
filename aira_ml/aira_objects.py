@@ -376,6 +376,8 @@ class Conv2DMaxPoolAira:
         filter_threads, rowcol_threads, channel_threads
         ):
 
+        self.index = index
+
         # Determine datapath parameters.
         self.weight_params = {
             'n_man': n_weight_mantissa,
@@ -420,8 +422,60 @@ class Conv2DMaxPoolAira:
             raise AiraException("Unsupported function found in a Dense layer: {}".format(act_name))
 
         # Compile filters.
+        weight_dat = self.allocate_filters(filters)
+        self.compile_weights(weight_dat, concat_channels=True)
 
         # Compile biases. 
 
-    def compile_filters():
-        pass
+    def allocate_filters(self, filters):
+        
+        # Flatten kernels into 1D representations.
+        filt_shape = np.shape(filters)
+        kernel_num = filt_shape[-1]
+        new_shape = (filt_shape[0] * filt_shape[1], *filt_shape[2:])
+        filters = np.array(filters).reshape(*new_shape)
+        
+        # Allocate kernels to filter threads.
+        kerns_per_thread = filt_shape[-1] / self.filter_threads
+        if not kerns_per_thread.is_integer():
+            raise AiraException("Number of kernels ({} kernels) cannot be evenly divided amongst specified threads ({} threads).".format(kernel_num, self.filter_threads))
+        kerns_per_thread = int(kerns_per_thread)
+        
+        weight_struct = [[[] for _ in range(self.channel_threads)] for _ in range(self.filter_threads)]
+        for i_kern in range(kernel_num):
+            for i_chan in range(self.channel_threads):
+                chan_filt = filters[:, i_chan, i_kern]
+                weight_struct[i_kern // kerns_per_thread][i_chan] += list(chan_filt)
+            
+        return weight_struct
+
+    def compile_weights(self, weight_dat, concat_channels=True):
+        
+        for i_kern, filter_weights in enumerate(weight_dat):
+            
+            float_dat = []
+            for i_chan, channel_weights in enumerate(filter_weights):
+                new_float_dat = [BinCompiler.compile_to_float(
+                    x, 
+                    n_mantissa = self.weight_params['n_man'],
+                    n_exponent = self.weight_params['n_exp']
+                ) for x in channel_weights]
+
+                if concat_channels:
+                    if len(float_dat) == 0:
+                        float_dat = new_float_dat
+                    else:
+                        float_dat = [x[0]+x[1] for x in zip(new_float_dat, float_dat)]
+                else:
+                    Filetools.save_to_file(
+                        "conv2dmaxpool_{}_weights_filtthread_{}_chanthread_{}".format(self.index, i_kern, i_chan), 
+                        new_float_dat, 
+                        verbose=False
+                    )
+  
+            if concat_channels:
+                Filetools.save_to_file(
+                    "conv2dmaxpool_{}_weights_filtthread_{}_concat".format(self.index, i_kern, i_chan), 
+                    float_dat, 
+                    verbose=False
+                )

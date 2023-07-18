@@ -7,6 +7,7 @@ import json
 import os
 from subprocess import check_call
 from aira_ml.tools.aira_exceptions import AiraException
+import glob
 
 class ModelCompiler:
 
@@ -20,6 +21,7 @@ class ModelCompiler:
         model.summary()
 
         print("\nDELTA: Compiling hardware...\n")
+        ModelCompiler.clear_cache()
 
         aira_sequential = []
 
@@ -165,7 +167,7 @@ class ModelCompiler:
                 n_output_exponent= out_exponent,
                 n_overflow       = params["n_overflow"],
                 mult_extra       = params["mult_extra"],
-                filter_threads   = 1,
+                filter_threads   = 2,
                 rowcol_threads   = 1,
                 channel_threads  = None
             )
@@ -360,3 +362,12 @@ class ModelCompiler:
         ), shell=True)
 
         print("\nDELTA: Hardware synthesis completed.")
+
+    @staticmethod
+    def clear_cache():
+        # Deletes the contents of the cache.
+        cache_path = "aira_ml/cache/*"
+
+        files = glob.glob(cache_path)
+        for f in files:
+            os.remove(f)
