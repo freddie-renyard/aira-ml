@@ -2,6 +2,7 @@ import tensorflow as tf
 from tensorflow.keras.datasets import mnist
 import numpy as np
 from tensorflow.keras.layers import Conv2D, MaxPooling2D, Dense, Flatten
+from matplotlib import pyplot as plt
 
 # Code for below adapted from the Keras and Tensorflow guides:
 # https://keras.io/examples/vision/mnist_convnet/
@@ -34,6 +35,11 @@ model.compile(
     loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
     metrics=[tf.keras.metrics.SparseCategoricalAccuracy()],
 )
+
+plt.imshow(x_train[0, :, :, 0])
+plt.show()
+print(x_train[0, :, :, 0])
+exit()
 
 model.fit(
     x_train,

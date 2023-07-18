@@ -159,7 +159,6 @@ class DenseAira:
             
             shifted_deltas = list(row_deltas)
             shifted_deltas.append(0)
-            #print("Shifted Deltas: {}".format(shifted_deltas))
 
             for delta, data_i in zip(shifted_deltas, non_zero_indices):
 
@@ -335,7 +334,6 @@ class Conv2DAira:
         
         sliced_weights = np.array(sliced_weights)
         sliced_weights_shape = np.shape(sliced_weights)
-        print(sliced_weights_shape)
 
         for w in range(self.conv_threads):
 
@@ -368,5 +366,15 @@ class Conv2DAira:
                 compiled_params
             )
 
+class Conv2DMaxPoolAira:
+
+    def __init__(self, index, filters, biases, act_name, 
+        n_input_mantissa, n_input_exponent,
+        n_weight_mantissa, n_weight_exponent,
+        n_output_mantissa, n_output_exponent,
+        n_overflow, mult_extra,
+        filter_threads, rowcol_threads, channel_threads
+        ):
         
-        
+        # Determine the parallelisation parameters.
+        pass

@@ -2,7 +2,7 @@ import tensorflow as tf
 import numpy as np
 from matplotlib import pyplot as plt
 from aira_ml.tools.matrix_tools import MatrixTools
-from aira_ml.aira_objects import Conv2DAira, DenseAira
+from aira_ml.aira_objects import Conv2DAira, Conv2DMaxPoolAira, DenseAira
 import json
 import os
 from subprocess import check_call
@@ -38,7 +38,7 @@ class ModelCompiler:
                 layer_count += 1
 
         index = 0
-        for layer in model.layers:
+        for i, layer in enumerate(model.layers):
             if 'dense' in layer.name:
                 
                 if index == (layer_count - 1):
@@ -47,15 +47,20 @@ class ModelCompiler:
                     multithread = True
 
                 dense_obj, prev_man, prev_exp = cls.extract_dense(layer, index, prev_man, prev_exp, multithreading=multithread)
-                
                 aira_sequential.append(dense_obj)
-
                 index += 1
+
             elif 'flatten' in layer.name:
                 cls.extract_flatten(layer)
             elif 'conv2d' in layer.name:
-                cls.extract_conv2d(layer, prev_man, prev_exp, index=index)
-                index += 1
+                if model.layers[i+1].name.find('max_pooling2d') != -1:
+                    if model.layers[i+1].pool_size == (2, 2):
+                        cls.extract_conv2d(layer, prev_man, prev_exp, index=index)
+                        index += 1
+                    else:
+                        raise AiraException("Only max pooling 2D layers with a pool size of (2,2) are supported currently.") 
+                else:
+                    raise AiraException("Only Conv2D layers followed by max pooling 2D layers are supported currently.") 
 
         # Extract the shape of the output tensor from the last layer.
         shape = np.array(layer.output_shape)
@@ -126,16 +131,16 @@ class ModelCompiler:
         return dense_obj, out_mantissa, out_exponent
 
     @classmethod
-    def extract_conv2d(cls, layer, n_in_mantissa, n_in_exponent, index):
+    def extract_conv2d(cls, layer, n_in_mantissa, n_in_exponent, index, max_pool=True):
         """Extract parameters from a convolutional layer.
         Will be expanded to support optimisations such as
-        combination with max pooling layers and input tiling.
+        combination with max pooling layers.
         """
 
         if layer.kernel_size[0] != layer.kernel_size[1]:
             raise AiraException("Only square kernels are currently supported in hardware.")
 
-        weight_tensor = layer.weights[0]
+        filter_tensor = layer.weights[0]
         bias_tensor = layer.bias
 
         # Get the compiler parameters
@@ -146,22 +151,26 @@ class ModelCompiler:
         out_mantissa = n_in_mantissa + params["mantissa_growth"]
         out_exponent = n_in_exponent + params["exponent_growth"]
 
-        conv_obj = Conv2DAira(
-            index           = index,
-            weights         = weight_tensor,
-            biases          = bias_tensor, 
-            act_name        = layer.activation.__qualname__,
-            n_input_mantissa= n_in_mantissa,
-            n_input_exponent= n_in_exponent,
-            n_weight_mantissa= params["weight_mantissa"],
-            n_weight_exponent= params["weight_exponent"],
-            n_output_mantissa= out_mantissa,
-            n_output_exponent= out_exponent,
-            n_overflow       = params["n_overflow"],
-            mult_extra       = params["mult_extra"],
-            conv_threads     = 1,
-            channel_threads  = 1 
-        )
+        if max_pool:
+            conv_obj = Conv2DMaxPoolAira(
+                index           = index,
+                filters         = filter_tensor,
+                biases          = bias_tensor, 
+                act_name        = layer.activation.__qualname__,
+                n_input_mantissa= n_in_mantissa,
+                n_input_exponent= n_in_exponent,
+                n_weight_mantissa= params["weight_mantissa"],
+                n_weight_exponent= params["weight_exponent"],
+                n_output_mantissa= out_mantissa,
+                n_output_exponent= out_exponent,
+                n_overflow       = params["n_overflow"],
+                mult_extra       = params["mult_extra"],
+                filter_threads   = 1,
+                rowcol_threads   = 1,
+                channel_threads  = None
+            )
+        else:
+            raise AiraException("Only integrated convolution-pooling layers are supported currently.")
 
         return conv_obj, out_mantissa, out_exponent
 
@@ -351,5 +360,3 @@ class ModelCompiler:
         ), shell=True)
 
         print("\nDELTA: Hardware synthesis completed.")
-    
-ModelCompiler.compile_tf_model("models/dense_mnist/model")
