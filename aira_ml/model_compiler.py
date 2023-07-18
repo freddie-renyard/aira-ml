@@ -143,7 +143,7 @@ class ModelCompiler:
             raise AiraException("Only square kernels are currently supported in hardware.")
 
         filter_tensor = layer.weights[0]
-        bias_tensor = layer.bias
+        bias_tensor = np.array(layer.bias)
 
         # Get the compiler parameters
         with open("aira_ml/config/compiler_config.json") as file:

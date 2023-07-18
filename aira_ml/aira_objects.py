@@ -426,6 +426,7 @@ class Conv2DMaxPoolAira:
         self.compile_weights(weight_dat, concat_channels=True)
 
         # Compile biases. 
+        self.allocate_and_compile_biases(biases)
 
     def allocate_filters(self, filters):
         
@@ -479,3 +480,24 @@ class Conv2DMaxPoolAira:
                     float_dat, 
                     verbose=False
                 )
+
+    def allocate_and_compile_biases(self, biases):
+
+        kerns_per_thread = np.shape(biases)[0] / self.filter_threads
+        if kerns_per_thread.is_integer() == False:
+            raise AiraException("The number of biases is not evenly divisible by the kernel number.")
+        kerns_per_thread = int(kerns_per_thread)        
+        
+        for i in range(self.filter_threads):
+
+            bin_float_dat = [BinCompiler.compile_to_float(
+                x, 
+                n_mantissa = self.weight_params['n_man'],
+                n_exponent = self.weight_params['n_exp']
+            ) for x in biases[i * kerns_per_thread: (i+1) * kerns_per_thread]]
+
+            Filetools.save_to_file(
+                "conv2dmaxpool_{}_biases_filtthread_{}".format(self.index, i), 
+                bin_float_dat, 
+                verbose=False
+            )
