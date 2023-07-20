@@ -56,15 +56,18 @@ class ModelCompiler:
                 cls.extract_flatten(layer)
             elif 'conv2d' in layer.name:
                 if len(model.layers[i:]) == 1:
-                    cls.extract_conv2d(layer, prev_man, prev_exp, index=index, max_pool=False)
+                    max_pool = False
                 elif model.layers[i+1].name.find('max_pooling2d') != -1:
                     if model.layers[i+1].pool_size == (2, 2):
-                        cls.extract_conv2d(layer, prev_man, prev_exp, index=index, max_pool=True)
-                        index += 1
+                        max_pool = True
                     else:
                         raise AiraException("Only max pooling 2D layers with a pool size of (2,2) are supported currently.") 
                 else:
-                    cls.extract_conv2d(layer, prev_man, prev_exp, index=index, max_pool=False)
+                    max_pool = False
+                
+                obj, prev_man, prev_exp = cls.extract_conv2d(layer, prev_man, prev_exp, index=index, max_pool=max_pool)
+                index += 1
+                aira_sequential.append(obj)
 
         # Extract the shape of the output tensor from the last layer.
         shape = np.array(layer.output_shape)

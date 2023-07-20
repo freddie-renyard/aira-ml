@@ -331,11 +331,12 @@ class Conv2DMaxPoolAira(AiraLayer):
         # Determine the parallelisation parameters.
         self.filter_threads = filter_threads # The number of threads used to compute the filter
         self.rowcol_threads = rowcol_threads # The number of threads used within each convolution on an image
-        self.channel_threads = channel_threads
         
-        if self.channel_threads is not None:
-            if self.channel_threads != self.prelayer_channels:
+        if channel_threads is not None:
+            if channel_threads != self.prelayer_channels:
                 raise AiraException("The number of channel threads must be the same as the number of channels in the input tensor ({}).".format(prelayer_channels))
+
+        self.channel_threads = self.prelayer_channels
 
         # Compile filters.
         weight_dat = self.allocate_filters(filters)
