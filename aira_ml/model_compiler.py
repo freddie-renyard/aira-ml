@@ -72,16 +72,16 @@ class ModelCompiler:
         cls.compile_system_verilog(aira_sequential)
 
         cls.compile_serial_params(
-            n_input     = aira_sequential[0].n_input,
-            n_output    = aira_sequential[-1].n_output,
+            n_input     = aira_sequential[0].input_params['n_data'],
+            n_output    = aira_sequential[-1].output_params['n_data'],
             input_num   = aira_sequential[0].pre_neuron_num,
             output_num  = aira_sequential[-1].post_neuron_num,
             in_format   = cls.determine_format(aira_sequential[0]),
             out_format  = cls.determine_format(aira_sequential[-1], get_input=False),
-            n_in_man    = aira_sequential[0].n_input_mantissa,
-            n_in_exp    = aira_sequential[0].n_input_exponent,
-            n_out_man   = aira_sequential[-1].n_output_mantissa,
-            n_out_exp   = aira_sequential[-1].n_output_exponent,
+            n_in_man    = aira_sequential[0].input_params['n_man'],
+            n_in_exp    = aira_sequential[0].input_params['n_exp'],
+            n_out_man   = aira_sequential[-1].output_params['n_man'],
+            n_out_exp   = aira_sequential[-1].output_params['n_exp'],
             output_shape = output_shape
         )
 
