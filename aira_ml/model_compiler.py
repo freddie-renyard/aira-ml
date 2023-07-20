@@ -76,8 +76,8 @@ class ModelCompiler:
             n_output    = aira_sequential[-1].output_params['n_data'],
             input_num   = aira_sequential[0].pre_neuron_num,
             output_num  = aira_sequential[-1].post_neuron_num,
-            in_format   = cls.determine_format(aira_sequential[0]),
-            out_format  = cls.determine_format(aira_sequential[-1], get_input=False),
+            in_format   = 'float'
+            out_format  = 'float'
             n_in_man    = aira_sequential[0].input_params['n_man'],
             n_in_exp    = aira_sequential[0].input_params['n_exp'],
             n_out_man   = aira_sequential[-1].output_params['n_man'],
@@ -305,21 +305,6 @@ class ModelCompiler:
 
         with open("aira_ml/cache/serial_params.json", "w") as file:
             json.dump(json_dict, file)
-
-    @staticmethod
-    def determine_format(obj, get_input=True):
-        """Determines the input or output format of an Aira object.
-        Used for compiling the parameters needed for the serial link.
-        """
-        if get_input:
-            exp_num = obj.n_input_exponent
-        else:
-            exp_num = obj.n_output_exponent
-        
-        if exp_num == 0:
-            return 'int'
-        else:
-            return 'float'
 
     @staticmethod
     def call_synthesis_server():

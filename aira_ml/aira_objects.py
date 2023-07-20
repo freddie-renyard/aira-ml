@@ -146,8 +146,6 @@ class DenseAira(AiraLayer):
                     verbose=False
                 )
 
-        self.compile_verilog_header()
-
     def determine_mem_depth(self, weights):
         """Determine the biggest address change across a matrix.
         """
