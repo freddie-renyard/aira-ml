@@ -8,7 +8,52 @@ from aira_ml.tools.binary_tools import BinCompiler
 from aira_ml.tools.file_tools import Filetools
 from math import ceil, log2
 
-class DenseAira:
+class AiraLayer:
+
+    def __init__(self, index, weights, biases, act_name, 
+        n_input_mantissa, n_input_exponent,
+        n_weight_mantissa, n_weight_exponent,
+        n_output_mantissa, n_output_exponent,
+        n_overflow, mult_extra
+        ):
+        # The parent class for other AiraML layers.
+
+        self.index = index
+        self.act_name = self.check_act_fn_support(act_name)
+
+        # Determine datapath parameters.
+        self.weight_params = {
+            'n_man': n_weight_mantissa,
+            'n_exp': n_weight_exponent,
+            'n_data': 1 + n_weight_exponent + n_weight_mantissa
+        }
+
+        self.input_params = {
+            'n_man': n_input_mantissa,
+            'n_exp': n_input_exponent,
+            'n_data': 1 + n_input_exponent + n_input_mantissa
+        }
+
+        self.output_params = {
+            'n_man': n_output_mantissa,
+            'n_exp': n_output_exponent,
+            'n_data': 1 + n_output_exponent + n_output_mantissa
+        }
+
+        self.alu_params = {
+            'mult_extra': mult_extra,
+            'n_overflow': n_overflow
+        }
+
+    def check_act_fn_support(self, act_name):
+        # Checks the support for activation functions passed to the layer.
+
+        if act_name == 'relu':
+            return act_name
+        else:
+            raise AiraException("Unsupported function found in a Dense layer: {}".format(act_name))
+
+class DenseAira(AiraLayer):
 
     def __init__(self, index, weights, biases, act_name, 
         n_input_mantissa, n_input_exponent,
@@ -16,16 +61,16 @@ class DenseAira:
         n_output_mantissa, n_output_exponent,
         n_overflow, mult_extra,
         threads):
-        
-        self.index = index
-        
-        # Ensure that the activation function used in the layer has
-        # hardware support.
-        self.act_name = None
-        if act_name == 'relu':
-            self.act_name = act_name
-        else:
-            raise AiraException("Unsupported function found in a Dense layer: {}".format(act_name))
+
+        # Initialise the parent layer params
+        super.__init__(index, weights, biases, act_name, 
+            n_input_mantissa, n_input_exponent,
+            n_weight_mantissa, n_weight_exponent,
+            n_output_mantissa, n_output_exponent,
+            n_overflow, mult_extra
+        )
+
+        # NB The non-floating point support has been removed.
 
         # Infer the number of neurons from the dimensionality of the weight matrix
         weight_dims = np.shape(weights)
@@ -33,35 +78,6 @@ class DenseAira:
         self.post_neuron_num = weight_dims[1]
 
         self.threads = self.verify_thread_validity(threads, self.post_neuron_num)
-
-        # Assign the datapath parameters
-
-        self.n_input_mantissa = n_input_mantissa
-        self.n_input_exponent = n_input_exponent
-
-        self.input_is_floating = (n_input_exponent != 0)
-
-        if self.input_is_floating:
-            self.n_input = 1 + self.n_input_exponent + self.n_input_mantissa
-        else:
-            self.n_input = self.n_input_mantissa
-
-        self.n_weight_mantissa = n_weight_mantissa
-        self.n_weight_exponent = n_weight_exponent
-
-        self.n_output_mantissa = n_output_mantissa
-        self.n_output_exponent = n_output_exponent
-
-        self.output_is_floating = (n_output_exponent != 0)
-
-        if self.input_is_floating:
-            self.n_output = 1 + self.n_output_exponent + self.n_output_mantissa
-        else:
-            self.n_output = self.n_output_mantissa
-
-        # Multiplier optimisation parameters - control of internal datapaths
-        self.n_overflow = n_overflow
-        self.mult_extra = mult_extra
 
         # Check that the weights are stored in a valid way.
         if np.shape(weight_dims)[0] != 2:
@@ -136,13 +152,13 @@ class DenseAira:
         The addresses are delta encoded:
         """
         
-        self.n_memory = self.n_pre_addr + 1 + self.n_weight_mantissa + self.n_weight_exponent
+        n_memory = self.n_pre_addr + 1 + self.weight_params['n_exp'] + self.weight_params['n_man']
         
         # Compile the weights.
         comp_weights = []
 
         # Compile a 'dummy' weight for the start of the memory file to signal the bias load
-        full_entry = "1" * self.n_memory
+        full_entry = "1" * n_memory
         comp_weights.append(full_entry)
 
         for row, bias in zip(weights, biases):
@@ -154,7 +170,7 @@ class DenseAira:
             full_entry = self.compile_row_data(bias, np.squeeze(non_zero_indices)[0])
             comp_weights.append(full_entry)
             
-            if len(full_entry) != self.n_memory:
+            if len(full_entry) != n_memory:
                 raise AiraException("Compiler Error: Binary strings are unequal.")
             
             shifted_deltas = list(row_deltas)
@@ -168,8 +184,8 @@ class DenseAira:
                 if delta == 0:
                     comp_weight = BinCompiler.compile_to_float(
                         data_weight,
-                        self.n_weight_mantissa,
-                        self.n_weight_exponent
+                        self.weight_params['n_man'],
+                        self.weight_params['n_exp']
                     )
 
                     break_code = "1" * self.n_pre_addr
@@ -186,8 +202,8 @@ class DenseAira:
 
         comp_weight = BinCompiler.compile_to_float(
             data, 
-            n_mantissa = self.n_weight_mantissa,
-            n_exponent = self.n_weight_exponent
+            n_mantissa = self.weight_params['n_man'],
+            n_exponent = self.weight_params['n_exp']
         )
 
         comp_addr = BinCompiler.compile_to_uint(
@@ -220,22 +236,24 @@ class DenseAira:
         output_str = open("aira_ml/sv_source/header_source/dense_header.sv").read()
 
         # Replace the markup with the parameters
+
+        output_str = output_str.replace("<n_man_input>", str(self.input_params['n_man']))
+        output_str = output_str.replace("<n_exp_input>", str(self.input_params['n_exp']))
+        output_str = output_str.replace("<n_input>", str(self.input_params['n_data']))
+
+        output_str = output_str.replace("<n_man_weight>", str(self.weight_params['n_man']))
+        output_str = output_str.replace("<n_exp_weight>", str(self.weight_params['n_exp']))
+
+        output_str = output_str.replace("<n_man_out>", str(self.output_params['n_man']))
+        output_str = output_str.replace("<n_exp_out>", str(self.output_params['n_exp']))
+        output_str = output_str.replace("<n_output>", str(self.output_params['n_data']))
+
+        output_str = output_str.replace("<n_overflow>", str(self.alu_params['n_overflow']))
+        output_str = output_str.replace("<mult_extra>", str(self.alu_params['mult_extra']))
+
+
         output_str = output_str.replace("<pre_neurons>", str(self.pre_neuron_num))
         output_str = output_str.replace("<post_neurons>", str(self.post_neuron_num))
-
-        output_str = output_str.replace("<n_man_input>", str(self.n_input_mantissa))
-        output_str = output_str.replace("<n_exp_input>", str(self.n_input_exponent))
-        output_str = output_str.replace("<n_input>", str(self.n_input))
-
-        output_str = output_str.replace("<n_man_weight>", str(self.n_weight_mantissa))
-        output_str = output_str.replace("<n_exp_weight>", str(self.n_weight_exponent))
-
-        output_str = output_str.replace("<n_man_out>", str(self.n_output_mantissa))
-        output_str = output_str.replace("<n_exp_out>", str(self.n_output_exponent))
-        output_str = output_str.replace("<n_output>", str(self.n_output))
-
-        output_str = output_str.replace("<n_overflow>", str(self.n_overflow))
-        output_str = output_str.replace("<mult_extra>", str(self.mult_extra))
 
         output_str = output_str.replace("<n_delta>", str(self.n_pre_addr))
 
@@ -278,95 +296,7 @@ class DenseAira:
         output_str = output_str.replace("<thread-list>", depth_list)
         return output_str.replace("<i>", str(self.index))
 
-class Conv2DAira:
-
-    # TODO Make these Aira objects children of a parent class
-    def __init__(self, index, weights, biases, act_name, 
-        n_input_mantissa, n_input_exponent,
-        n_weight_mantissa, n_weight_exponent,
-        n_output_mantissa, n_output_exponent,
-        n_overflow, mult_extra,
-        conv_threads, channel_threads 
-        ):
-
-        self.index = index
-        
-        # Ensure that the activation function used in the layer has
-        # hardware support.
-        self.act_name = None
-        if act_name == 'relu':
-            self.act_name = act_name
-        else:
-            raise AiraException("Unsupported function found in a Dense layer: {}".format(act_name))
-
-        # Assign binary parameters
-        self.n_weight_mantissa = n_weight_mantissa
-        self.n_weight_exponent = n_weight_exponent
-
-        # Reshape the weights to simplify the compiler methods.
-        # Target shape - (n,n, in_filters, out_filters)
-        weight_shape =  np.shape(weights)
-        self.weights = np.array(weights)
-        self.pre_channels = weight_shape[2]
-        self.filters = weight_shape[3]
-
-        self.conv_threads = conv_threads
-
-        interlaced_filters = [[] for _ in range(conv_threads)]
-        interlaced_biases = [[] for _ in range(conv_threads)]
-
-        for i in range(self.filters):
-            interlaced_filters[i % conv_threads].append(self.weights[:,:,:,i])
-            interlaced_biases[i % conv_threads].append(biases[i])
-
-        # TODO Add inner product (channel) multithreading compilation capabilities.
-
-        self.compile_filter_thread(interlaced_filters, interlaced_biases)
-
-    def compile_filter_thread(self, sliced_weights, biases):
-        """Compiles and saves a tensor in the appropriate format for
-        hardware interpretation.
-        """
-
-        # Get the number of 'channels' of the input tensor.
-        # This is used to determine how many threads are 
-        # computing the inner product in the each filter computation.
-        
-        sliced_weights = np.array(sliced_weights)
-        sliced_weights_shape = np.shape(sliced_weights)
-
-        for w in range(self.conv_threads):
-
-            compiled_params = []
-            for i in range(self.filters // self.conv_threads):
-
-                compiled_bias = BinCompiler.compile_to_float(
-                    np.array(biases[w][i]),
-                    self.n_weight_mantissa,
-                    self.n_weight_exponent
-                )
-                compiled_params.append(compiled_bias)
-
-                for j in range(self.pre_channels):
-
-                    # Flatten the weight tensor
-                    flat_weights = sliced_weights[w, i, :, :, j].flatten()
-
-                    # Compile each weight to the target binary format
-                    for weight in flat_weights:
-                        comp_weight = BinCompiler.compile_to_float(
-                            weight,
-                            self.n_weight_mantissa,
-                            self.n_weight_exponent
-                        )
-                        compiled_params.append(comp_weight)
-            
-            Filetools.save_to_file(
-                "conv_params_{}_thread_{}".format(self.index, str(w)),
-                compiled_params
-            )
-
-class Conv2DMaxPoolAira:
+class Conv2DMaxPoolAira(AiraLayer):
 
     def __init__(self, index, filters, biases, act_name, 
         n_input_mantissa, n_input_exponent,
@@ -376,32 +306,14 @@ class Conv2DMaxPoolAira:
         filter_threads, rowcol_threads, channel_threads
         ):
 
-        self.index = index
+        # Initialise the parent layer params
+        super.__init__(index, weights, biases, act_name, 
+            n_input_mantissa, n_input_exponent,
+            n_weight_mantissa, n_weight_exponent,
+            n_output_mantissa, n_output_exponent,
+            n_overflow, mult_extra
+        )
 
-        # Determine datapath parameters.
-        self.weight_params = {
-            'n_man': n_weight_mantissa,
-            'n_exp': n_weight_exponent,
-            'n_data': 1 + n_weight_exponent + n_weight_mantissa
-        }
-
-        self.input_params = {
-            'n_man': n_input_mantissa,
-            'n_exp': n_input_exponent,
-            'n_data': 1 + n_input_exponent + n_input_mantissa
-        }
-
-        self.alu_params = {
-            'mult_extra': mult_extra,
-            'n_overflow': n_overflow
-        }
-
-        self.output_params = {
-            'n_man': n_output_mantissa,
-            'n_exp': n_output_exponent,
-            'n_data': 1 + n_output_exponent + n_output_mantissa
-        }
-        
         # Determine the parallelisation parameters.
         self.filter_threads = filter_threads # The number of threads used to compute the filter
         self.rowcol_threads = rowcol_threads # The number of threads used within each convolution on an image
@@ -412,14 +324,6 @@ class Conv2DMaxPoolAira:
                 raise AiraException("The number of channel threads must be the same as the number of channels in the input tensor ({}).".format(prelayer_channels))
 
         self.channel_threads = prelayer_channels
-
-        # Ensure that the activation function used in the layer has
-        # hardware support.
-        self.act_name = None
-        if act_name == 'relu':
-            self.act_name = act_name
-        else:
-            raise AiraException("Unsupported function found in a Dense layer: {}".format(act_name))
 
         # Compile filters.
         weight_dat = self.allocate_filters(filters)

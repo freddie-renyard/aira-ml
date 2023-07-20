@@ -195,17 +195,11 @@ class ModelCompiler:
        
         # Compile the input data width
         first_obj = aira_sequential[0]
-        if first_obj.input_is_floating:
-            in_width = 1 + first_obj.n_input_exponent + first_obj.n_input_mantissa
-        else:
-            in_width = first_obj.n_input_mantissa
+        in_width = 1 + first_obj.n_input_exponent + first_obj.n_input_mantissa
 
         # Compile the output data width
         last_obj = aira_sequential[-1]
-        if last_obj.input_is_floating:
-            out_width = 1 + last_obj.n_output_exponent + last_obj.n_output_mantissa
-        else:
-            out_width = last_obj.n_output_mantissa
+        out_width = 1 + last_obj.n_output_exponent + last_obj.n_output_mantissa
 
         # Insert the data widths into the header file.
         verilog_header = verilog_header.replace("<n_mod_in>", str(in_width))
