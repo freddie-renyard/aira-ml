@@ -4,5 +4,3 @@ POST_NEURON_NUM_<i> = <post_neurons>,
 N_ADDR_DELTA_<i> = <n_delta>,
 ACT_FUNC_<i> = <act_code>,
 THREADS_<i> = <threads>,
-FILE_ID_<i> = <i>;
-

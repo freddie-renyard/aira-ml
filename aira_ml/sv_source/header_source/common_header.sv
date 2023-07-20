@@ -1,5 +1,6 @@
 // Layer <i> Common Parameters 
-parameter N_MAN_INPUT_<i> = <n_man_input>,
+parameter LAYER_ID_<i> = <i>,
+N_MAN_INPUT_<i> = <n_man_input>,
 N_EXP_INPUT_<i> = <n_exp_input>,
 N_INPUT_<i> = <n_input>,
 
@@ -11,5 +12,6 @@ N_EXP_OUT_<i> = <n_exp_out>,
 N_OUTPUT_<i> = <n_output>,
     
 N_OVERFLOW_<i> = <n_overflow>,
-MULT_EXTRA_<i> = <mult_extra>;
+MULT_EXTRA_<i> = <mult_extra>,
+ACT_FUNC_<i> = <act_code>;
 

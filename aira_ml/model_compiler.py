@@ -69,6 +69,8 @@ class ModelCompiler:
         output_shape = list(shape[shape != np.array(None)])
         
         cls.compile_full_header(aira_sequential)
+        print('SystemVerilog header compiled successfully')
+
         cls.compile_system_verilog(aira_sequential)
 
         cls.compile_serial_params(
@@ -76,8 +78,8 @@ class ModelCompiler:
             n_output    = aira_sequential[-1].output_params['n_data'],
             input_num   = aira_sequential[0].pre_neuron_num,
             output_num  = aira_sequential[-1].post_neuron_num,
-            in_format   = 'float'
-            out_format  = 'float'
+            in_format   = 'float',
+            out_format  = 'float',
             n_in_man    = aira_sequential[0].input_params['n_man'],
             n_in_exp    = aira_sequential[0].input_params['n_exp'],
             n_out_man   = aira_sequential[-1].output_params['n_man'],
@@ -140,7 +142,11 @@ class ModelCompiler:
 
         if layer.kernel_size[0] != layer.kernel_size[1]:
             raise AiraException("Only square kernels are currently supported in hardware.")
-
+        
+        if layer.data_format != 'channels_last':
+            # TODO Transpose appropriately to bring the model weights into Aira's representation.
+            raise AiraException("Only channels_last models are currently supported.")
+        
         filter_tensor = layer.weights[0]
         bias_tensor = np.array(layer.bias)
 
@@ -166,6 +172,7 @@ class ModelCompiler:
                 n_output_exponent= out_exponent,
                 n_overflow       = params["n_overflow"],
                 mult_extra       = params["mult_extra"],
+                input_shape      = layer.input_shape[1:] 
                 filter_threads   = 2,
                 rowcol_threads   = 1,
                 channel_threads  = None

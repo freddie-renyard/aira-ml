@@ -70,7 +70,17 @@ class AiraLayer:
         output_str = output_str.replace("<n_overflow>", str(self.alu_params['n_overflow']))
         output_str = output_str.replace("<mult_extra>", str(self.alu_params['mult_extra']))
 
+        if self.act_name == 'relu':
+            act_code = "1"
+        else:
+            act_code = "0"
+        
+        output_str = output_str.replace("<act_code>", act_code)
+
         return output_str
+    
+    def get_comma_delim_lst(self, target_lst):
+        return ','.join(target_lst)
         
 class DenseAira(AiraLayer):
 
@@ -251,19 +261,13 @@ class DenseAira(AiraLayer):
         """
 
         output_str = open("aira_ml/sv_source/header_source/dense_header.sv").read()
+        output_str = output_str.replace("<i>", str(self.index))
         
         # Replace the markup with the parameters
         output_str = output_str.replace("<pre_neurons>", str(self.pre_neuron_num))
         output_str = output_str.replace("<post_neurons>", str(self.post_neuron_num))
 
         output_str = output_str.replace("<n_delta>", str(self.n_pre_addr))
-
-        if self.act_name == 'relu':
-            act_code = "1"
-        else:
-            act_code = "0"
-        
-        output_str = output_str.replace("<act_code>", act_code)
         output_str = output_str.replace("<threads>", str(self.threads))
 
         return output_str
@@ -301,8 +305,8 @@ class Conv2DMaxPoolAira(AiraLayer):
         n_input_mantissa, n_input_exponent,
         n_weight_mantissa, n_weight_exponent,
         n_output_mantissa, n_output_exponent,
-        n_overflow, mult_extra,
-        filter_threads, rowcol_threads, channel_threads
+        n_overflow, mult_extra, 
+        input_shape, filter_threads, rowcol_threads, channel_threads
         ):
 
         # Initialise the parent layer params
@@ -313,16 +317,23 @@ class Conv2DMaxPoolAira(AiraLayer):
             n_overflow, mult_extra
         )
 
+        # Determine tensor parameters for the convolution
+        conv_tensor_shape       = np.shape(filters)
+        self.filter_num         = conv_tensor_shape[3]
+        self.prelayer_channels  = conv_tensor_shape[2]
+        self.kernel_dim         = conv_tensor_shape[0]
+
+        # Determine input image shape
+        self.input_shape = input_shape
+
         # Determine the parallelisation parameters.
         self.filter_threads = filter_threads # The number of threads used to compute the filter
         self.rowcol_threads = rowcol_threads # The number of threads used within each convolution on an image
-
-        prelayer_channels = np.shape(filters)[2]
-        if channel_threads is not None:
-            if channel_threads != prelayer_channels:
+        self.channel_threads = self.prelayer_channels
+        
+        if self.channel_threads is not None:
+            if self.channel_threads != self.prelayer_channels:
                 raise AiraException("The number of channel threads must be the same as the number of channels in the input tensor ({}).".format(prelayer_channels))
-
-        self.channel_threads = prelayer_channels
 
         # Compile filters.
         weight_dat = self.allocate_filters(filters)
@@ -330,6 +341,9 @@ class Conv2DMaxPoolAira(AiraLayer):
 
         # Compile biases. 
         self.allocate_and_compile_biases(biases)
+
+        # Compile entry and exit pointers.
+        self.compile_pointers()
 
     def allocate_filters(self, filters):
         
@@ -418,3 +432,35 @@ class Conv2DMaxPoolAira(AiraLayer):
                 float_dat, 
                 verbose=False
             )
+
+    def compile_pointers(self):
+        # Compiles the entry and exit pointers for the rowcol threads.
+
+        self.entry_ptrs = []
+        self.exit_ptrs = []
+        pass
+
+    def compile_layer_header(self):
+        """Compile the parameters for the model into the Verilog header.
+        """
+
+        output_str = open("aira_ml/sv_source/header_source/conv2d_header.sv").read()
+        output_str = output_str.replace("<i>", str(self.index))
+        
+        # Replace the markup with the parameters
+        output_str = output_str.replace("<n_input_ports>", str(self.prelayer_channels))
+        output_str = output_str.replace("<n_chan>", str(self.prelayer_channels))
+        output_str = output_str.replace("<n_thread_chan>", str(self.prelayer_channels))
+        output_str = output_str.replace("<n_filter>", str(self.filter_num))
+        output_str = output_str.replace("<filter_dim>", str(self.kernel_dim))
+
+        output_str = output_str.replace("<n_col>", str(self.input_shape[1]))
+        output_str = output_str.replace("<n_row>", str(self.input_shape[0]))
+
+        output_str = output_str.replace("<n_thread_filter>", str(self.filter_threads))
+        output_str = output_str.replace("<n_thread_filter>", str(self.rowcol_threads))
+
+        output_str = output_str.replace("<entry_ptrs>", ','.join(self.entry_ptrs))
+        output_str = output_str.replace("<exit_ptrs>", ','.join(self.exit_ptrs))
+        
+        return output_str
