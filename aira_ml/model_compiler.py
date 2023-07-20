@@ -55,14 +55,16 @@ class ModelCompiler:
             elif 'flatten' in layer.name:
                 cls.extract_flatten(layer)
             elif 'conv2d' in layer.name:
-                if model.layers[i+1].name.find('max_pooling2d') != -1:
+                if len(model.layers[i:]) == 1:
+                    cls.extract_conv2d(layer, prev_man, prev_exp, index=index, max_pool=False)
+                elif model.layers[i+1].name.find('max_pooling2d') != -1:
                     if model.layers[i+1].pool_size == (2, 2):
-                        cls.extract_conv2d(layer, prev_man, prev_exp, index=index)
+                        cls.extract_conv2d(layer, prev_man, prev_exp, index=index, max_pool=True)
                         index += 1
                     else:
                         raise AiraException("Only max pooling 2D layers with a pool size of (2,2) are supported currently.") 
                 else:
-                    raise AiraException("Only Conv2D layers followed by max pooling 2D layers are supported currently.") 
+                    cls.extract_conv2d(layer, prev_man, prev_exp, index=index, max_pool=False)
 
         # Extract the shape of the output tensor from the last layer.
         shape = np.array(layer.output_shape)
@@ -158,27 +160,25 @@ class ModelCompiler:
         out_mantissa = n_in_mantissa + params["mantissa_growth"]
         out_exponent = n_in_exponent + params["exponent_growth"]
 
-        if max_pool:
-            conv_obj = Conv2DMaxPoolAira(
-                index           = index,
-                filters         = filter_tensor,
-                biases          = bias_tensor, 
-                act_name        = layer.activation.__qualname__,
-                n_input_mantissa= n_in_mantissa,
-                n_input_exponent= n_in_exponent,
-                n_weight_mantissa= params["weight_mantissa"],
-                n_weight_exponent= params["weight_exponent"],
-                n_output_mantissa= out_mantissa,
-                n_output_exponent= out_exponent,
-                n_overflow       = params["n_overflow"],
-                mult_extra       = params["mult_extra"],
-                input_shape      = layer.input_shape[1:] 
-                filter_threads   = 2,
-                rowcol_threads   = 1,
-                channel_threads  = None
-            )
-        else:
-            raise AiraException("Only integrated convolution-pooling layers are supported currently.")
+        conv_obj = Conv2DMaxPoolAira(
+            index           = index,
+            filters         = filter_tensor,
+            biases          = bias_tensor, 
+            act_name        = layer.activation.__qualname__,
+            n_input_mantissa= n_in_mantissa,
+            n_input_exponent= n_in_exponent,
+            n_weight_mantissa= params["weight_mantissa"],
+            n_weight_exponent= params["weight_exponent"],
+            n_output_mantissa= out_mantissa,
+            n_output_exponent= out_exponent,
+            n_overflow       = params["n_overflow"],
+            mult_extra       = params["mult_extra"],
+            input_shape      = layer.input_shape[1:],
+            max_pool         = max_pool,
+            filter_threads   = 2,
+            rowcol_threads   = 1,
+            channel_threads  = None
+        )
 
         return conv_obj, out_mantissa, out_exponent
 

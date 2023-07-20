@@ -306,7 +306,8 @@ class Conv2DMaxPoolAira(AiraLayer):
         n_weight_mantissa, n_weight_exponent,
         n_output_mantissa, n_output_exponent,
         n_overflow, mult_extra, 
-        input_shape, filter_threads, rowcol_threads, channel_threads
+        input_shape, max_pool,
+        filter_threads, rowcol_threads, channel_threads
         ):
 
         # Initialise the parent layer params
@@ -325,11 +326,12 @@ class Conv2DMaxPoolAira(AiraLayer):
 
         # Determine input image shape
         self.input_shape = input_shape
+        self.max_pool = max_pool
 
         # Determine the parallelisation parameters.
         self.filter_threads = filter_threads # The number of threads used to compute the filter
         self.rowcol_threads = rowcol_threads # The number of threads used within each convolution on an image
-        self.channel_threads = self.prelayer_channels
+        self.channel_threads = channel_threads
         
         if self.channel_threads is not None:
             if self.channel_threads != self.prelayer_channels:
@@ -453,6 +455,7 @@ class Conv2DMaxPoolAira(AiraLayer):
         output_str = output_str.replace("<n_thread_chan>", str(self.prelayer_channels))
         output_str = output_str.replace("<n_filter>", str(self.filter_num))
         output_str = output_str.replace("<filter_dim>", str(self.kernel_dim))
+        output_str = output_str.replace("<max_pool>", str(self.max_pool))
 
         output_str = output_str.replace("<n_col>", str(self.input_shape[1]))
         output_str = output_str.replace("<n_row>", str(self.input_shape[0]))
