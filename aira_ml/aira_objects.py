@@ -1,8 +1,4 @@
-from concurrent.futures import thread
-from tabnanny import verbose
 import numpy as np
-from scipy.fftpack import shift
-from sklearn.multiclass import OutputCodeClassifier
 from aira_ml.tools.aira_exceptions import AiraException
 from aira_ml.tools.binary_tools import BinCompiler
 from aira_ml.tools.file_tools import Filetools
@@ -53,6 +49,29 @@ class AiraLayer:
         else:
             raise AiraException("Unsupported function found in a Dense layer: {}".format(act_name))
 
+    def compile_common_header(self):
+        # Compiles parameters that are common to all Aira layers.
+        
+        output_str = open("aira_ml/sv_source/header_source/common_header.sv").read()
+        output_str = output_str.replace("<i>", str(self.index))
+
+        # Replace the markup with the parameters
+        output_str = output_str.replace("<n_man_input>", str(self.input_params['n_man']))
+        output_str = output_str.replace("<n_exp_input>", str(self.input_params['n_exp']))
+        output_str = output_str.replace("<n_input>", str(self.input_params['n_data']))
+
+        output_str = output_str.replace("<n_man_weight>", str(self.weight_params['n_man']))
+        output_str = output_str.replace("<n_exp_weight>", str(self.weight_params['n_exp']))
+
+        output_str = output_str.replace("<n_man_out>", str(self.output_params['n_man']))
+        output_str = output_str.replace("<n_exp_out>", str(self.output_params['n_exp']))
+        output_str = output_str.replace("<n_output>", str(self.output_params['n_data']))
+
+        output_str = output_str.replace("<n_overflow>", str(self.alu_params['n_overflow']))
+        output_str = output_str.replace("<mult_extra>", str(self.alu_params['mult_extra']))
+
+        return output_str
+        
 class DenseAira(AiraLayer):
 
     def __init__(self, index, weights, biases, act_name, 
@@ -229,29 +248,13 @@ class DenseAira(AiraLayer):
         
         return threads
 
-    def compile_verilog_header(self):
+    def compile_layer_header(self):
         """Compile the parameters for the model into the Verilog header.
         """
 
         output_str = open("aira_ml/sv_source/header_source/dense_header.sv").read()
-
+        
         # Replace the markup with the parameters
-
-        output_str = output_str.replace("<n_man_input>", str(self.input_params['n_man']))
-        output_str = output_str.replace("<n_exp_input>", str(self.input_params['n_exp']))
-        output_str = output_str.replace("<n_input>", str(self.input_params['n_data']))
-
-        output_str = output_str.replace("<n_man_weight>", str(self.weight_params['n_man']))
-        output_str = output_str.replace("<n_exp_weight>", str(self.weight_params['n_exp']))
-
-        output_str = output_str.replace("<n_man_out>", str(self.output_params['n_man']))
-        output_str = output_str.replace("<n_exp_out>", str(self.output_params['n_exp']))
-        output_str = output_str.replace("<n_output>", str(self.output_params['n_data']))
-
-        output_str = output_str.replace("<n_overflow>", str(self.alu_params['n_overflow']))
-        output_str = output_str.replace("<mult_extra>", str(self.alu_params['mult_extra']))
-
-
         output_str = output_str.replace("<pre_neurons>", str(self.pre_neuron_num))
         output_str = output_str.replace("<post_neurons>", str(self.post_neuron_num))
 
@@ -264,8 +267,6 @@ class DenseAira(AiraLayer):
         
         output_str = output_str.replace("<act_code>", act_code)
         output_str = output_str.replace("<threads>", str(self.threads))
-
-        output_str = output_str.replace("<i>", str(self.index))
 
         return output_str
 

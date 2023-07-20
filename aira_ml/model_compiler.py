@@ -69,7 +69,6 @@ class ModelCompiler:
         output_shape = list(shape[shape != np.array(None)])
         
         cls.compile_full_header(aira_sequential)
-
         cls.compile_system_verilog(aira_sequential)
 
         cls.compile_serial_params(
@@ -193,13 +192,8 @@ class ModelCompiler:
         # Open the start points of the Verilog header file.
         verilog_header = open("aira_ml/sv_source/header_source/aira_params.vh").read()
        
-        # Compile the input data width
-        first_obj = aira_sequential[0]
-        in_width = 1 + first_obj.n_input_exponent + first_obj.n_input_mantissa
-
-        # Compile the output data width
-        last_obj = aira_sequential[-1]
-        out_width = 1 + last_obj.n_output_exponent + last_obj.n_output_mantissa
+        in_width = 1 + aira_sequential[0].input_params['n_exp'] + aira_sequential[0].input_params['n_man']
+        out_width = 1 + aira_sequential[-1].output_params['n_exp'] + aira_sequential[-1].output_params['n_man']
 
         # Insert the data widths into the header file.
         verilog_header = verilog_header.replace("<n_mod_in>", str(in_width))
@@ -208,9 +202,9 @@ class ModelCompiler:
         # Loop over all the objects in the model.
         for aira_obj in aira_sequential:
 
-            # Add the object's parameter declarations into 
-            # the Verilog header.
-            verilog_header += aira_obj.compile_verilog_header()
+            # Add the object's parameter declarations into the Verilog header.
+            verilog_header += aira_obj.compile_common_header() # Compiles parameters that are common to all layers.
+            verilog_header += aira_obj.compile_layer_header()  # Compiles layer-specific parameters.
 
         with open("aira_ml/cache/aira_params.vh", 'w') as output_file:
             output_file.write(verilog_header)
