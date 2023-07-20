@@ -10,7 +10,7 @@ from math import ceil, log2
 
 class AiraLayer:
 
-    def __init__(self, index, weights, biases, act_name, 
+    def __init__(self, index, act_name, 
         n_input_mantissa, n_input_exponent,
         n_weight_mantissa, n_weight_exponent,
         n_output_mantissa, n_output_exponent,
@@ -63,7 +63,7 @@ class DenseAira(AiraLayer):
         threads):
 
         # Initialise the parent layer params
-        super.__init__(index, weights, biases, act_name, 
+        super().__init__(index, act_name, 
             n_input_mantissa, n_input_exponent,
             n_weight_mantissa, n_weight_exponent,
             n_output_mantissa, n_output_exponent,
@@ -307,7 +307,7 @@ class Conv2DMaxPoolAira(AiraLayer):
         ):
 
         # Initialise the parent layer params
-        super.__init__(index, weights, biases, act_name, 
+        super().__init__(index, act_name, 
             n_input_mantissa, n_input_exponent,
             n_weight_mantissa, n_weight_exponent,
             n_output_mantissa, n_output_exponent,

@@ -2,7 +2,7 @@ import tensorflow as tf
 import numpy as np
 from matplotlib import pyplot as plt
 from aira_ml.tools.matrix_tools import MatrixTools
-from aira_ml.aira_objects import Conv2DAira, Conv2DMaxPoolAira, DenseAira
+from aira_ml.aira_objects import Conv2DMaxPoolAira, DenseAira
 import json
 import os
 from subprocess import check_call
