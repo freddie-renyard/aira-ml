@@ -20,7 +20,7 @@ class ModelCompiler:
         model = tf.keras.models.load_model(path_to_model)
         model.summary()
 
-        print("\nDELTA: Compiling hardware...\n")
+        print("\nAIRA: Compiling hardware...")
         ModelCompiler.clear_cache()
 
         aira_sequential = []
@@ -78,8 +78,6 @@ class ModelCompiler:
         output_shape = list(shape[shape != np.array(None)])
         
         cls.compile_full_header(aira_sequential)
-        print('SystemVerilog header compiled successfully')
-
         cls.compile_system_verilog(aira_sequential)
 
         cls.compile_serial_params(
@@ -169,9 +167,10 @@ class ModelCompiler:
 
         conv_obj = Conv2DMaxPoolAira(
             index           = index,
-            filters         = filter_tensor,
-            biases          = bias_tensor, 
-            act_name        = layer.activation.__qualname__,
+            
+            conv_layer      = layer,
+            max_pool_layer  = max_pool_layer,
+
             n_input_mantissa= n_in_mantissa,
             n_input_exponent= n_in_exponent,
             n_weight_mantissa= params["weight_mantissa"],
@@ -180,11 +179,9 @@ class ModelCompiler:
             n_output_exponent= out_exponent,
             n_overflow       = params["n_overflow"],
             mult_extra       = params["mult_extra"],
-            input_shape      = layer.input_shape[1:],
-            output_shape     = layer.output_shape[1:],
-            max_pool_layer   = max_pool_layer,
-            filter_threads   = 2,
-            rowcol_threads   = 5,
+            
+            filter_threads   = 1,
+            rowcol_threads   = 1,
             channel_threads  = None
         )
 
@@ -326,7 +323,7 @@ class ModelCompiler:
         """Transfers the contents of the cache to the synthesis server.
         """
 
-        print("\nDELTA: Uploading data to server...\n")
+        print("AIRA: Uploading data to server...")
 
         with open("aira_ml/config/server_config.json") as file:
             server_config = json.load(file)
@@ -349,7 +346,7 @@ class ModelCompiler:
             bitstream_path
         ), shell=True)
 
-        print("\nDELTA: Hardware synthesis completed.")
+        print("AIRA: Hardware synthesis completed.")
 
     @staticmethod
     def clear_cache():

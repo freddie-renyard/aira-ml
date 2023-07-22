@@ -50,6 +50,23 @@ class AiraLayer:
         else:
             raise AiraException("Unsupported function found in a Dense layer: {}".format(act_name))
 
+    def modify_threads(self, ops, threads):
+        # Calculates the nearest number of threads that can compute the operation specified.
+        # Used for thread allocation.
+
+        if ops % threads != 0:
+            return threads
+
+        factors = set()
+        for i in range(1, ops):
+            if ops % i == 0:
+                factors.add(i)
+        
+        factors = list(factors)
+        factors.sort()
+        difs = [abs(threads - fac) for fac in factors]
+        return factors[difs.index(min(difs))]
+
     def compile_common_header(self):
         # Compiles parameters that are common to all Aira layers.
         
@@ -127,7 +144,7 @@ class DenseAira(AiraLayer):
         self.input_len = weight_dims[0]
         self.output_len = weight_dims[1]
 
-        self.threads = self.verify_thread_validity(threads, self.output_len)
+        self.threads = self.modify_threads(self.output_len, threads)
 
         # Check that the weights are stored in a valid way.
         if np.shape(weight_dims)[0] != 2:
@@ -159,7 +176,7 @@ class DenseAira(AiraLayer):
             weights_interlaced = np.zeros(interlaced_shape)
 
             # Create an empty 2D numpy array for the interlaced biases.
-            biases_shape = (threads, neurons_per_thread)
+            biases_shape = (self.threads, neurons_per_thread)
             biases_interlaced = np.zeros(biases_shape)
 
             # Interlace the weight matrix into seperate matrices.
@@ -262,21 +279,6 @@ class DenseAira(AiraLayer):
 
         return comp_weight + comp_addr
 
-    def verify_thread_validity(self, threads, neurons):
-        """Determine if the number of threads is able to be
-        realised in hardware.
-        """
-
-        threads_invalid = True
-        while threads_invalid:
-            if neurons % threads == 0:
-                threads_invalid = False
-            else:
-                print("{} threads cannot run {} neurons. Decreasing thread number...".format(threads, neurons))
-                threads -= 1
-        
-        return threads
-
     def compile_layer_header(self):
         """Compile the parameters for the model into the Verilog header.
         """
@@ -305,17 +307,17 @@ class DenseAira(AiraLayer):
 
 class Conv2DMaxPoolAira(AiraLayer):
 
-    def __init__(self, index, filters, biases, act_name, 
+    def __init__(self, index, conv_layer, max_pool_layer,
         n_input_mantissa, n_input_exponent,
         n_weight_mantissa, n_weight_exponent,
         n_output_mantissa, n_output_exponent,
-        n_overflow, mult_extra, 
-        input_shape, output_shape, max_pool_layer,
-        filter_threads, rowcol_threads, channel_threads
+        n_overflow, mult_extra,
+        filter_threads, rowcol_threads, channel_threads,
+        override_z_addr = True
         ):
 
         # Initialise the parent layer params
-        super().__init__(index, act_name, 
+        super().__init__(index, conv_layer.activation.__qualname__,
             n_input_mantissa, n_input_exponent,
             n_weight_mantissa, n_weight_exponent,
             n_output_mantissa, n_output_exponent,
@@ -325,22 +327,30 @@ class Conv2DMaxPoolAira(AiraLayer):
         self.layer_name = 'conv2D'
 
         # Determine tensor parameters for the convolution
-        conv_tensor_shape       = np.shape(filters)
+        conv_tensor_shape       = np.shape(conv_layer.weights[0])
         self.filter_num         = conv_tensor_shape[3]
         self.prelayer_channels  = conv_tensor_shape[2]
         self.kernel_dim         = conv_tensor_shape[0]
 
         # Determine input and output data entries
-        self.input_len  = int(np.prod(input_shape))
-        self.output_len = int(np.prod(output_shape))
+        self.input_len  = int(np.prod(conv_layer.input_shape[1:]))
+        self.output_len = int(np.prod(conv_layer.output_shape[1:]))
 
         # Determine input image shape
-        self.input_shape = input_shape
+        self.input_shape = conv_layer.input_shape[1:]
 
         self.max_pool = self.z_addr = (max_pool_layer is not None)
+        self.padding = (conv_layer.padding == 'same')
+
+        self.z_addr = override_z_addr or self.z_addr
         
         # Check input layer strides
-
+        if np.prod(conv_layer.strides) != 1:
+            raise AiraException("Convolution layers with a stride > 1 are currently not supported.")
+        
+        if max_pool_layer is not None:
+            if tuple(max_pool_layer.strides) != (2, 2):
+                raise AiraException("Only 2x2 max pooling layers are currently supported.")
 
         # Set the number of i/o ports
         self.input_ports = self.prelayer_channels
@@ -357,14 +367,19 @@ class Conv2DMaxPoolAira(AiraLayer):
         self.channel_threads = self.prelayer_channels
 
         # Compile filters.
-        weight_dat = self.allocate_filters(filters)
+        weight_dat = self.allocate_filters(conv_layer.weights[0])
         self.compile_weights(weight_dat, concat_channels=True)
 
         # Compile biases. 
-        self.allocate_and_compile_biases(biases)
+        self.allocate_and_compile_biases(np.array(conv_layer.bias))
 
         # Compile entry and exit pointers.
-        self.entry_ptrs, self.exit_ptrs = self.compile_pointers(z_addr=self.z_addr, padding=(int(self.kernel_dim / 2)))
+        if self.padding:
+            padding = (int(self.kernel_dim / 2))
+        else:
+            padding = 0
+
+        self.entry_ptrs, self.exit_ptrs = self.compile_pointers(z_addr=self.z_addr, padding=padding)
 
     def allocate_filters(self, filters):
         
@@ -481,10 +496,12 @@ class Conv2DMaxPoolAira(AiraLayer):
         entry_points = len(entry_addrs)
 
         if self.rowcol_threads > entry_points:
-            raise AiraException(
-                "The number of rowcol threads requested ({}) is larger than the number of input pixels ({})."
+            print(
+                "AIRA: The number of rowcol threads requested ({}) is larger than the number of input pixels ({})."
                 .format(self.rowcol_threads, entry_points)
             )
+            self.rowcol_threads = entry_points
+            print("AIRA: Set the rowcol thread number to the number of entry points ({})".format(entry_points))
 
         if entry_points % self.rowcol_threads:
 
@@ -493,20 +510,12 @@ class Conv2DMaxPoolAira(AiraLayer):
                 .format(entry_points, self.rowcol_threads, self.index)
             )
 
-            factors = set()
-            for i in range(1, entry_points):
-                if entry_points % i == 0:
-                    factors.add(i)
-            
-            factors = list(factors)
-            factors.sort()
-            difs = [abs(self.rowcol_threads - fac) for fac in factors]
-            self.rowcol_threads = factors[difs.index(min(difs))]
+            self.rowcol_threads = self.modify_threads(entry_points, self.rowcol_threads)
 
             print("AIRA: Updated rowcol threads for layer {} to {} threads.".format(self.index, self.rowcol_threads))
 
         addr_incr = int(entry_points / self.rowcol_threads)
-        addrs = [entry_addrs[addr_incr * i] for i in range(self.rowcol_threads)]
+        addrs = [entry_addrs[addr_incr * i] for i in range(self.rowcol_threads)] + [int(np.prod(shape_2d))]
 
         return addrs[:-1], addrs[1:]
             
@@ -522,13 +531,13 @@ class Conv2DMaxPoolAira(AiraLayer):
         output_str = output_str.replace("<n_thread_chan>", str(self.prelayer_channels))
         output_str = output_str.replace("<n_filter>", str(self.filter_num))
         output_str = output_str.replace("<filter_dim>", str(self.kernel_dim))
-        output_str = output_str.replace("<max_pool>", str(self.max_pool))
+        output_str = output_str.replace("<max_pool>", str(int(self.max_pool)))
 
         output_str = output_str.replace("<n_col>", str(self.input_shape[1]))
         output_str = output_str.replace("<n_row>", str(self.input_shape[0]))
 
         output_str = output_str.replace("<n_thread_filter>", str(self.filter_threads))
-        output_str = output_str.replace("<n_thread_filter>", str(self.rowcol_threads))
+        output_str = output_str.replace("<n_thread_rowcol>", str(self.rowcol_threads))
 
         output_str = output_str.replace("<entry_ptrs>", ','.join([str(x) for x in self.entry_ptrs]))
         output_str = output_str.replace("<exit_ptrs>", ','.join([str(x) for x in self.exit_ptrs]))
