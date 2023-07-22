@@ -59,6 +59,8 @@ class AiraLayer:
         output_str = output_str.replace("<n_man_input>", str(self.input_params['n_man']))
         output_str = output_str.replace("<n_exp_input>", str(self.input_params['n_exp']))
         output_str = output_str.replace("<n_input>", str(self.input_params['n_data']))
+        output_str = output_str.replace("<n_input_ports>", str(self.input_ports))
+        output_str = output_str.replace("<input_len>", str(self.input_len))
 
         output_str = output_str.replace("<n_man_weight>", str(self.weight_params['n_man']))
         output_str = output_str.replace("<n_exp_weight>", str(self.weight_params['n_exp']))
@@ -66,6 +68,8 @@ class AiraLayer:
         output_str = output_str.replace("<n_man_out>", str(self.output_params['n_man']))
         output_str = output_str.replace("<n_exp_out>", str(self.output_params['n_exp']))
         output_str = output_str.replace("<n_output>", str(self.output_params['n_data']))
+        output_str = output_str.replace("<n_output_ports>", str(self.output_ports))
+        output_str = output_str.replace("<output_len>", str(self.output_len))
 
         output_str = output_str.replace("<n_overflow>", str(self.alu_params['n_overflow']))
         output_str = output_str.replace("<mult_extra>", str(self.alu_params['mult_extra']))
@@ -79,9 +83,21 @@ class AiraLayer:
 
         return output_str
     
-    def get_comma_delim_lst(self, target_lst):
-        return ','.join(target_lst)
-        
+    def compile_verilog_wires(self, file_name='layer_wires.sv'):
+        """Insert the marked-up wire declarations into the Verilog source code.
+        Returns the SystemVerilog code as a string.
+        """
+
+        output_str = open("aira_ml/sv_source/{}".format(file_name)).read()
+        return output_str.replace("<i>", str(self.index))
+    
+    def compile_verilog_module(self):
+        """Insert the marked-up module declaration into the Verilog source code.
+        Returns the SystemVerilog code as a string.
+        """
+        output_str = open("aira_ml/sv_source/{}_module.sv".format(self.layer_name)).read()
+        return output_str.replace("<i>", str(self.index))
+
 class DenseAira(AiraLayer):
 
     def __init__(self, index, weights, biases, act_name, 
@@ -99,14 +115,18 @@ class DenseAira(AiraLayer):
             n_overflow, mult_extra
         )
 
-        # NB The non-floating point support has been removed.
+        self.layer_name = 'dense'
+
+        # Set the number of i/o ports
+        self.input_ports = 1
+        self.output_ports = 1
 
         # Infer the number of neurons from the dimensionality of the weight matrix
         weight_dims = np.shape(weights)
-        self.pre_neuron_num = weight_dims[0]
-        self.post_neuron_num = weight_dims[1]
+        self.input_len = weight_dims[0]
+        self.output_len = weight_dims[1]
 
-        self.threads = self.verify_thread_validity(threads, self.post_neuron_num)
+        self.threads = self.verify_thread_validity(threads, self.output_len)
 
         # Check that the weights are stored in a valid way.
         if np.shape(weight_dims)[0] != 2:
@@ -130,11 +150,11 @@ class DenseAira(AiraLayer):
         else:
             # TODO Put this into a function.
 
-            neurons_per_thread = self.post_neuron_num // self.threads
+            neurons_per_thread = self.output_len // self.threads
 
             # Create an empty 3D numpy array with shape: 
             # (number of threads, neurons_per_thread, pre neuron number)
-            interlaced_shape = (self.threads, neurons_per_thread, self.pre_neuron_num)
+            interlaced_shape = (self.threads, neurons_per_thread, self.input_len)
             weights_interlaced = np.zeros(interlaced_shape)
 
             # Create an empty 2D numpy array for the interlaced biases.
@@ -264,29 +284,11 @@ class DenseAira(AiraLayer):
         output_str = output_str.replace("<i>", str(self.index))
         
         # Replace the markup with the parameters
-        output_str = output_str.replace("<pre_neurons>", str(self.pre_neuron_num))
-        output_str = output_str.replace("<post_neurons>", str(self.post_neuron_num))
+        output_str = output_str.replace("<pre_neurons>", str(self.input_len))
+        output_str = output_str.replace("<post_neurons>", str(self.output_len))
 
         output_str = output_str.replace("<n_delta>", str(self.n_pre_addr))
         output_str = output_str.replace("<threads>", str(self.threads))
-
-        return output_str
-
-    def compile_verilog_wires(self):
-        """Insert the marked-up wire declarations into the Verilog source code.
-        Returns the SystemVerilog code as a string.
-        """
-
-        output_str = open("aira_ml/sv_source/dense_wires.sv").read()
-        
-        return output_str.replace("<i>", str(self.index))
-
-    def compile_verilog_module(self):
-        """Insert the marked-up module declaration into the Verilog source code.
-        Returns the SystemVerilog code as a string.
-        """
-
-        output_str = open("aira_ml/sv_source/dense_module.sv").read()
 
         self.mem_depths = self.mem_depths[::-1]
         depth_list = str(self.mem_depths[0])
@@ -297,7 +299,8 @@ class DenseAira(AiraLayer):
             depth_list += ", {}".format(self.mem_depths[-1]) 
 
         output_str = output_str.replace("<thread-list>", depth_list)
-        return output_str.replace("<i>", str(self.index))
+
+        return output_str
 
 class Conv2DMaxPoolAira(AiraLayer):
 
@@ -306,7 +309,7 @@ class Conv2DMaxPoolAira(AiraLayer):
         n_weight_mantissa, n_weight_exponent,
         n_output_mantissa, n_output_exponent,
         n_overflow, mult_extra, 
-        input_shape, max_pool,
+        input_shape, output_shape, max_pool,
         filter_threads, rowcol_threads, channel_threads
         ):
 
@@ -318,15 +321,25 @@ class Conv2DMaxPoolAira(AiraLayer):
             n_overflow, mult_extra
         )
 
+        self.layer_name = 'conv2D'
+
         # Determine tensor parameters for the convolution
         conv_tensor_shape       = np.shape(filters)
         self.filter_num         = conv_tensor_shape[3]
         self.prelayer_channels  = conv_tensor_shape[2]
         self.kernel_dim         = conv_tensor_shape[0]
 
+        # Determine input and output data entries
+        self.input_len  = int(np.prod(input_shape))
+        self.output_len = int(np.prod(output_shape))
+
         # Determine input image shape
         self.input_shape = input_shape
         self.max_pool = max_pool
+
+        # Set the number of i/o ports
+        self.input_ports = self.prelayer_channels
+        self.output_ports = 1
 
         # Determine the parallelisation parameters.
         self.filter_threads = filter_threads # The number of threads used to compute the filter
@@ -451,7 +464,6 @@ class Conv2DMaxPoolAira(AiraLayer):
         output_str = output_str.replace("<i>", str(self.index))
         
         # Replace the markup with the parameters
-        output_str = output_str.replace("<n_input_ports>", str(self.prelayer_channels))
         output_str = output_str.replace("<n_chan>", str(self.prelayer_channels))
         output_str = output_str.replace("<n_thread_chan>", str(self.prelayer_channels))
         output_str = output_str.replace("<n_filter>", str(self.filter_num))

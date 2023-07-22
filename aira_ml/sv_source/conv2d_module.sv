@@ -1,9 +1,6 @@
 
-
-    dense_threaded_top #(
-        .FILE_ID(LAYER_ID_<i>),
-        .PRE_NEURON_NUM(INPUT_LEN_<i>),
-        .POST_NEURON_NUM(OUTPUT_LEN_<i>),
+conv2d_top #(
+        .LAYER_ID(LAYER_ID_<i>),
         .N_MAN_INPUT(N_MAN_INPUT_<i>),
         .N_EXP_INPUT(N_EXP_INPUT_<i>),
         .N_MAN_WEIGHT(N_MAN_WEIGHT_<i>),
@@ -12,11 +9,24 @@
         .N_EXP_OUT(N_EXP_OUT_<i>),
         .N_OVERFLOW(N_OVERFLOW_<i>),
         .MULT_EXTRA(MULT_EXTRA_<i>),
-        .MEM_DEPTH(MEM_DEPTHS_<i>), 
         .ACT_FUNC(ACT_FUNC_<i>),
-        .THREADS(THREADS_<i>),
-        .N_ADDR_DELTA(N_ADDR_DELTA_<i>)
+        .N_INPUT_PORTS(N_INPUT_PORTS_<i>),
+        .N_OUTPUT_PORTS(N_OUTPUT_PORTS_<i>),
+        .N_INPUT_ADDR(N_INPUT_ADDR_<i>),
+        .N_OUTPUT_ADDR(N_OUTPUT_ADDR_<i>),
+        .N_CHAN(N_CHAN_<i>),
+        .N_THREAD_CHAN(N_THREAD_CHAN_<i>),
+        .N_FILTER(N_FILTER_<i>),
+        .FILTER_DIM(FILTER_DIM_<i>),
+        .N_COL(N_COL_<i>),
+        .N_ROW(N_ROW_<i>),
+        .N_THREAD_ROWCOL(N_THREAD_ROWCOL_<i>),
+        .N_THREAD_FILTER(N_THREAD_FILTER_<i>),
+        .ENTRY_PTRS(ENTRY_PTRS_<i>),
+        .EXIT_PTRS(EXIT_PTRS_<i>),
+        .MAX_POOL(MAX_POOL_<i>)
     ) layer_<i> (
+
         .clk(clk),
         .rst(rst),
         

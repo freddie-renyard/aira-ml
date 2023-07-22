@@ -1,6 +1,6 @@
 // Dense Layer <i> Parameters 
-parameter PRE_NEURON_NUM_<i> = <pre_neurons>,
-POST_NEURON_NUM_<i> = <post_neurons>,
-N_ADDR_DELTA_<i> = <n_delta>,
+parameter N_ADDR_DELTA_<i> = <n_delta>,
 ACT_FUNC_<i> = <act_code>,
-THREADS_<i> = <threads>,
+THREADS_<i> = <threads>;
+
+parameter integer MEM_DEPTHS_<i> [THREADS_<i>-1:0] = '{<thread-list>};

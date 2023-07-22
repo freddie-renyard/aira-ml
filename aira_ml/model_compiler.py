@@ -81,8 +81,8 @@ class ModelCompiler:
         cls.compile_serial_params(
             n_input     = aira_sequential[0].input_params['n_data'],
             n_output    = aira_sequential[-1].output_params['n_data'],
-            input_num   = aira_sequential[0].pre_neuron_num,
-            output_num  = aira_sequential[-1].post_neuron_num,
+            input_num   = aira_sequential[0].input_len,
+            output_num  = aira_sequential[-1].output_len,
             in_format   = 'float',
             out_format  = 'float',
             n_in_man    = aira_sequential[0].input_params['n_man'],
@@ -177,6 +177,7 @@ class ModelCompiler:
             n_overflow       = params["n_overflow"],
             mult_extra       = params["mult_extra"],
             input_shape      = layer.input_shape[1:],
+            output_shape     = layer.output_shape[1:],
             max_pool         = max_pool,
             filter_threads   = 2,
             rowcol_threads   = 1,

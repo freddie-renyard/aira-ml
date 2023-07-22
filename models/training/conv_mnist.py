@@ -27,7 +27,7 @@ model = tf.keras.models.Sequential([
     MaxPooling2D(pool_size=(2,2)),
     Flatten(),
     Dense(128, activation='relu'),
-    Dense(10, activation='softmax')
+    Dense(10, activation='relu')
 ])
 
 model.compile(
@@ -36,10 +36,8 @@ model.compile(
     metrics=[tf.keras.metrics.SparseCategoricalAccuracy()],
 )
 
-plt.imshow(x_train[0, :, :, 0])
-plt.show()
-print(x_train[0, :, :, 0])
-exit()
+# plt.imshow(x_train[0, :, :, 0])
+# plt.show()
 
 model.fit(
     x_train,

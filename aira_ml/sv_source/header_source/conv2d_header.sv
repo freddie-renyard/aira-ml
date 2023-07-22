@@ -1,5 +1,4 @@
-// Conv2D Parameters
-parameter N_INPUT_PORTS_<i> = <n_input_ports>; // Number of input ports.  NB Must be the channel dimensionality of the input
+// Layer <i> Conv2D Parameters
 parameter N_CHAN_<i> = <n_chan>;
 parameter N_THREAD_CHAN_<i> = <n_thread_chan>; // Hardware only supports full parallelization of this at the moment.
 parameter N_FILTER_<i> = <n_filter>;
