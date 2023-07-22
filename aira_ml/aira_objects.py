@@ -1,3 +1,4 @@
+from turtle import shape
 import numpy as np
 from aira_ml.tools.aira_exceptions import AiraException
 from aira_ml.tools.binary_tools import BinCompiler
@@ -309,7 +310,7 @@ class Conv2DMaxPoolAira(AiraLayer):
         n_weight_mantissa, n_weight_exponent,
         n_output_mantissa, n_output_exponent,
         n_overflow, mult_extra, 
-        input_shape, output_shape, max_pool,
+        input_shape, output_shape, max_pool_layer,
         filter_threads, rowcol_threads, channel_threads
         ):
 
@@ -335,7 +336,11 @@ class Conv2DMaxPoolAira(AiraLayer):
 
         # Determine input image shape
         self.input_shape = input_shape
-        self.max_pool = max_pool
+
+        self.max_pool = self.z_addr = (max_pool_layer is not None)
+        
+        # Check input layer strides
+
 
         # Set the number of i/o ports
         self.input_ports = self.prelayer_channels
@@ -358,8 +363,8 @@ class Conv2DMaxPoolAira(AiraLayer):
         # Compile biases. 
         self.allocate_and_compile_biases(biases)
 
-        # Compile entry pointers.
-        self.compile_pointers()
+        # Compile entry and exit pointers.
+        self.entry_ptrs, self.exit_ptrs = self.compile_pointers(z_addr=self.z_addr, padding=(int(self.kernel_dim / 2)))
 
     def allocate_filters(self, filters):
         
@@ -449,13 +454,62 @@ class Conv2DMaxPoolAira(AiraLayer):
                 verbose=False
             )
 
-    def compile_pointers(self):
+    def compile_pointers(self, z_addr=True, padding=0):
         # Compiles the entry pointers for the rowcol threads.
+        
+        shape_2d = (self.input_shape[0] + 2 * padding, self.input_shape[1] + 2 * padding)
 
-        self.entry_ptrs = []
-        self.exit_ptrs = []
-        pass
+        # Check that the rowcol threads value is possible.
+        if z_addr:
+            for dim in shape_2d:
+                if dim % 2:
+                    print(
+                        "WARNING: An input image of these dimensions ({}) in layer {} cannot be currently be realised with max pooling z-addressing."
+                        .format(shape_2d, self.index)
+                    )
+        else:
+            entry_points = int(np.prod(shape_2d))
+        
+        if z_addr:
+            arr_indices = np.indices(shape_2d) % 2 == 0
+            arr_indices = np.prod(arr_indices, axis=0)
+        else:
+            arr_indices = np.ones(shape_2d)
+        
+        lin_indices = np.reshape(arr_indices, np.prod(shape_2d), order="C") 
+        entry_addrs = np.squeeze(np.where(lin_indices == 1))
+        entry_points = len(entry_addrs)
 
+        if self.rowcol_threads > entry_points:
+            raise AiraException(
+                "The number of rowcol threads requested ({}) is larger than the number of input pixels ({})."
+                .format(self.rowcol_threads, entry_points)
+            )
+
+        if entry_points % self.rowcol_threads:
+
+            print(
+                "AIRA: The input image which has {} entry points cannot be evenly divided between {} rowcol threads in layer {}."
+                .format(entry_points, self.rowcol_threads, self.index)
+            )
+
+            factors = set()
+            for i in range(1, entry_points):
+                if entry_points % i == 0:
+                    factors.add(i)
+            
+            factors = list(factors)
+            factors.sort()
+            difs = [abs(self.rowcol_threads - fac) for fac in factors]
+            self.rowcol_threads = factors[difs.index(min(difs))]
+
+            print("AIRA: Updated rowcol threads for layer {} to {} threads.".format(self.index, self.rowcol_threads))
+
+        addr_incr = int(entry_points / self.rowcol_threads)
+        addrs = [entry_addrs[addr_incr * i] for i in range(self.rowcol_threads)]
+
+        return addrs[:-1], addrs[1:]
+            
     def compile_layer_header(self):
         """Compile the parameters for the model into the Verilog header.
         """
@@ -476,6 +530,7 @@ class Conv2DMaxPoolAira(AiraLayer):
         output_str = output_str.replace("<n_thread_filter>", str(self.filter_threads))
         output_str = output_str.replace("<n_thread_filter>", str(self.rowcol_threads))
 
-        output_str = output_str.replace("<entry_ptrs>", ','.join(self.entry_ptrs))
+        output_str = output_str.replace("<entry_ptrs>", ','.join([str(x) for x in self.entry_ptrs]))
+        output_str = output_str.replace("<exit_ptrs>", ','.join([str(x) for x in self.exit_ptrs]))
         
         return output_str

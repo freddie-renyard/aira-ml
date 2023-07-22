@@ -65,7 +65,11 @@ class ModelCompiler:
                 else:
                     max_pool = False
                 
-                obj, prev_man, prev_exp = cls.extract_conv2d(layer, prev_man, prev_exp, index=index, max_pool=max_pool)
+                if max_pool:
+                    obj, prev_man, prev_exp = cls.extract_conv2d(layer, model.layers[i+1], prev_man, prev_exp, index=index)
+                else:
+                    obj, prev_man, prev_exp = cls.extract_conv2d(layer, None, prev_man, prev_exp, index=index)
+                    
                 index += 1
                 aira_sequential.append(obj)
 
@@ -139,7 +143,7 @@ class ModelCompiler:
         return dense_obj, out_mantissa, out_exponent
 
     @classmethod
-    def extract_conv2d(cls, layer, n_in_mantissa, n_in_exponent, index, max_pool=True):
+    def extract_conv2d(cls, layer, max_pool_layer, n_in_mantissa, n_in_exponent, index):
         """Extract parameters from a convolutional layer.
         Will be expanded to support optimisations such as
         combination with max pooling layers.
@@ -178,9 +182,9 @@ class ModelCompiler:
             mult_extra       = params["mult_extra"],
             input_shape      = layer.input_shape[1:],
             output_shape     = layer.output_shape[1:],
-            max_pool         = max_pool,
+            max_pool_layer   = max_pool_layer,
             filter_threads   = 2,
-            rowcol_threads   = 1,
+            rowcol_threads   = 5,
             channel_threads  = None
         )
 
