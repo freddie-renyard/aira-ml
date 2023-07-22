@@ -358,7 +358,7 @@ class Conv2DMaxPoolAira(AiraLayer):
         # Compile biases. 
         self.allocate_and_compile_biases(biases)
 
-        # Compile entry and exit pointers.
+        # Compile entry pointers.
         self.compile_pointers()
 
     def allocate_filters(self, filters):
@@ -450,7 +450,7 @@ class Conv2DMaxPoolAira(AiraLayer):
             )
 
     def compile_pointers(self):
-        # Compiles the entry and exit pointers for the rowcol threads.
+        # Compiles the entry pointers for the rowcol threads.
 
         self.entry_ptrs = []
         self.exit_ptrs = []
@@ -477,6 +477,5 @@ class Conv2DMaxPoolAira(AiraLayer):
         output_str = output_str.replace("<n_thread_filter>", str(self.rowcol_threads))
 
         output_str = output_str.replace("<entry_ptrs>", ','.join(self.entry_ptrs))
-        output_str = output_str.replace("<exit_ptrs>", ','.join(self.exit_ptrs))
         
         return output_str
