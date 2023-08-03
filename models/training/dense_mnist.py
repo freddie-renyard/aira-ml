@@ -33,5 +33,5 @@ model.fit(
     validation_split=0.1
 )
 
-#intermediate_layer_model = tf.keras.Model(inputs=model.input, outputs=model.get_layer('dense').output)
+# intermediate_layer_model = tf.keras.Model(inputs=model.input, outputs=model.get_layer('dense').output)
 model.save('models/dense_mnist/model')

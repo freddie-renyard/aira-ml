@@ -1,3 +1,4 @@
+from email.header import Header
 import tensorflow as tf
 import numpy as np
 from matplotlib import pyplot as plt
@@ -77,8 +78,8 @@ class ModelCompiler:
         shape = np.array(layer.output_shape)
         output_shape = list(shape[shape != np.array(None)])
         
-        cls.compile_full_header(aira_sequential)
-        cls.compile_system_verilog(aira_sequential)
+        header = cls.compile_full_header(aira_sequential, ret_str=True)
+        cls.compile_system_verilog(aira_sequential, header=header)
 
         cls.compile_serial_params(
             n_input     = aira_sequential[0].input_params['n_data'],
@@ -197,7 +198,7 @@ class ModelCompiler:
         pass
 
     @classmethod
-    def compile_full_header(cls, aira_sequential):
+    def compile_full_header(cls, aira_sequential, ret_str=True):
         """Compiles the Verilog header file for the model. The Aira
         objects are passed in in a list.
         """
@@ -210,7 +211,11 @@ class ModelCompiler:
         # Insert the data widths into the header file.
         verilog_header = verilog_header.replace("<n_mod_in>", str(in_width))
         verilog_header = verilog_header.replace("<n_mod_out>", str(out_width))
-
+        verilog_header = verilog_header.replace("<n_mod_in_ports>", str(aira_sequential[0].input_ports))
+        verilog_header = verilog_header.replace("<n_mod_out_ports>", str(aira_sequential[-1].output_ports))
+        verilog_header = verilog_header.replace("<n_mod_in_len>", str(aira_sequential[0].input_len))
+        verilog_header = verilog_header.replace("<n_mod_out_len>", str(aira_sequential[-1].output_len))
+        
         # Loop over all the objects in the model.
         for aira_obj in aira_sequential:
 
@@ -218,16 +223,22 @@ class ModelCompiler:
             verilog_header += aira_obj.compile_common_header() # Compiles parameters that are common to all layers.
             verilog_header += aira_obj.compile_layer_header()  # Compiles layer-specific parameters.
 
-        with open("aira_ml/cache/aira_params.vh", 'w') as output_file:
-            output_file.write(verilog_header)
+        if ret_str:
+            return verilog_header
+        else:
+            with open("aira_ml/cache/aira_params.vh", 'w') as output_file:
+                output_file.write(verilog_header)
         
     @classmethod
-    def compile_system_verilog(cls, aira_sequential):
+    def compile_system_verilog(cls, aira_sequential, header=None):
         """ Compiles the full SystemVerilog source file.
         The Aira objects are passed in as a list.
         """
 
         aira_ml_top = open("aira_ml/sv_source/aira_ml_top.sv").read()
+
+        if header is not None:
+            aira_ml_top += header.replace('\n', '\n' + "\t")
 
         # Add wire declarations to the Verilog
         for aira_obj in aira_sequential:

@@ -1,14 +1,14 @@
 {
-    "weight_mantissa": 4,
-    "weight_exponent": 4,
+    "weight_mantissa": 5,
+    "weight_exponent": 5,
     "mult_extra": 2,
     "n_overflow": 1,
 
     "mantissa_growth": 1,
     "exponent_growth": 1,
 
-    "starting_mantissa": 4,
-    "starting_exponent": 4,
+    "starting_mantissa": 5,
+    "starting_exponent": 5,
 
     "threads": 4
 }

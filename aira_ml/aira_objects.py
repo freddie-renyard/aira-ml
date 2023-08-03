@@ -105,7 +105,6 @@ class AiraLayer:
         """Insert the marked-up wire declarations into the Verilog source code.
         Returns the SystemVerilog code as a string.
         """
-
         output_str = open("aira_ml/sv_source/{}".format(file_name)).read()
         return output_str.replace("<i>", str(self.index))
     
@@ -340,6 +339,10 @@ class Conv2DMaxPoolAira(AiraLayer):
         self.input_shape = conv_layer.input_shape[1:]
 
         self.max_pool = self.z_addr = (max_pool_layer is not None)
+
+        if conv_layer.padding != 'same':
+            raise AiraException("Convolution layers with padding of type {} are not currently supported.".format(conv_layer.padding))
+
         self.padding = (conv_layer.padding == 'same')
 
         self.z_addr = override_z_addr or self.z_addr
@@ -354,7 +357,7 @@ class Conv2DMaxPoolAira(AiraLayer):
 
         # Set the number of i/o ports
         self.input_ports = self.prelayer_channels
-        self.output_ports = 1
+        self.output_ports = self.filter_num
 
         # Determine the parallelisation parameters.
         self.filter_threads = filter_threads # The number of threads used to compute the filter

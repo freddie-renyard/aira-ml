@@ -1,9 +1,7 @@
 
 
-    dense_threaded_top #(
-        .FILE_ID(LAYER_ID_<i>),
-        .PRE_NEURON_NUM(INPUT_LEN_<i>),
-        .POST_NEURON_NUM(OUTPUT_LEN_<i>),
+    dense_new_top #(
+        .LAYER_ID(LAYER_ID_<i>),
         .N_MAN_INPUT(N_MAN_INPUT_<i>),
         .N_EXP_INPUT(N_EXP_INPUT_<i>),
         .N_MAN_WEIGHT(N_MAN_WEIGHT_<i>),
@@ -12,10 +10,16 @@
         .N_EXP_OUT(N_EXP_OUT_<i>),
         .N_OVERFLOW(N_OVERFLOW_<i>),
         .MULT_EXTRA(MULT_EXTRA_<i>),
-        .MEM_DEPTH(MEM_DEPTHS_<i>), 
         .ACT_FUNC(ACT_FUNC_<i>),
+        .N_INPUT_PORTS(N_INPUT_PORTS_<i>),
+        .N_OUTPUT_PORTS(N_OUTPUT_PORTS_<i>),
+        .N_INPUT_ADDR(N_INPUT_ADDR_<i>),
+        .N_OUTPUT_ADDR(N_OUTPUT_ADDR_<i>),
+        .PRE_NEURON_NUM(INPUT_LEN_<i>),
+        .POST_NEURON_NUM(OUTPUT_LEN_<i>),
         .THREADS(THREADS_<i>),
-        .N_ADDR_DELTA(N_ADDR_DELTA_<i>)
+        .N_ADDR_DELTA(N_ADDR_DELTA_<i>),
+        .MEM_DEPTHS(MEM_DEPTHS_<i>)
     ) layer_<i> (
         .clk(clk),
         .rst(rst),

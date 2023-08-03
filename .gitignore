@@ -6,3 +6,4 @@ aira_ml/cache
 aira_ml/rx_cache
 notes.txt
 aira_ml/config/server_config.json
+models/phy_model
