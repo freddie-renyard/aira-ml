@@ -21,11 +21,14 @@ print(np.shape(model.layers[0].get_weights()[0]))
 print("Bias: ", model.layers[0].get_weights()[1])
 print(inference)
 
+print(dir(inference))
+
 for i in range(np.shape(inference)[3]):
     total = 0
+    print("First z conv: ", end=" ")
     for j in range(3):
         filter = np.array(model.layers[0].get_weights()[0])[:,:,j,i].flatten()
-        print("{:.3f}".format(np.sum(filter)), end=" ")
+        print("{:.3f}".format(np.sum(np.multiply(filter, [0,0,0,0,1,1,0,1,1]))), end=" ")
         total += np.sum(filter)
 
     print("Sum total: {:.4f}".format(total))

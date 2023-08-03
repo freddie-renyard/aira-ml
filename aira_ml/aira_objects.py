@@ -340,10 +340,12 @@ class Conv2DMaxPoolAira(AiraLayer):
 
         self.max_pool = self.z_addr = (max_pool_layer is not None)
 
-        if conv_layer.padding != 'same':
+        if conv_layer.padding == 'same':
+            self.padding = 1
+        elif conv_layer.padding == 'valid':
+            self.padding = 0
+        else:
             raise AiraException("Convolution layers with padding of type {} are not currently supported.".format(conv_layer.padding))
-
-        self.padding = (conv_layer.padding == 'same')
 
         self.z_addr = override_z_addr or self.z_addr
         
@@ -478,26 +480,55 @@ class Conv2DMaxPoolAira(AiraLayer):
         shape_2d = (self.input_shape[0] + 2 * padding, self.input_shape[1] + 2 * padding)
 
         # Check that the rowcol threads value is possible.
+        row_mod = False
+        col_mod = False
         if z_addr:
-            for dim in shape_2d:
-                if dim % 2:
-                    print(
-                        "WARNING: An input image of these dimensions ({}) in layer {} cannot be currently be realised with max pooling z-addressing."
-                        .format(shape_2d, self.index)
-                    )
-        else:
-            entry_points = int(np.prod(shape_2d))
+            row_mod = (shape_2d[0] % 2 != 0)
+            col_mod = (shape_2d[1] % 2 != 0)
+       
+        entry_points = int(np.prod(shape_2d))
         
         if z_addr:
-            arr_indices = np.indices(shape_2d) % 2 == 0
-            arr_indices = np.prod(arr_indices, axis=0)
-        else:
-            arr_indices = np.ones(shape_2d)
-        
-        lin_indices = np.reshape(arr_indices, np.prod(shape_2d), order="C") 
-        entry_addrs = np.squeeze(np.where(lin_indices == 1))
-        entry_points = len(entry_addrs)
+            entry_mat = np.indices(shape_2d) % 2 == 0
+            entry_mat = np.prod(entry_mat, axis=0)
 
+            # Remove illegal entry points
+            illegal_row = np.zeros(np.shape(entry_mat), dtype=int)
+            for i, row in enumerate(illegal_row):
+                if i < np.shape(illegal_row)[0] - self.kernel_dim:
+                    illegal_row[i] += 1
+            
+            entry_mat = np.multiply(entry_mat, illegal_row) # Remove illegal row entry points
+            entry_mat = np.multiply(entry_mat, np.transpose(illegal_row)) # Remove illegal column entry points
+
+            # Compute a 2D map of the exit pointer locations.
+            entry_coords = np.argwhere(entry_mat == 1)
+            exit_coords  = [[x + self.kernel_dim, y + self.kernel_dim] for x, y in entry_coords]
+
+            exit_mat = np.zeros(shape_2d, dtype=int)
+            for coord in exit_coords:
+                exit_mat[coord[0], coord[1]] = 1
+            
+        else:
+            raise AiraException("Non-max pooling layers are not supported yet.")
+            entry_mat = np.ones(shape_2d)
+        
+        print(entry_mat)
+        print(exit_mat)
+
+        lin_indices = np.reshape(entry_mat, np.prod(shape_2d), order="C") 
+        entry_addrs = np.squeeze(np.where(lin_indices == 1))
+        
+        lin_indices = np.reshape(exit_mat, np.prod(shape_2d), order="C") 
+        exit_addrs = np.squeeze(np.where(lin_indices == 1))
+
+        try:
+            entry_points = len(entry_addrs)
+        except:
+            entry_points = 1
+            entry_addrs = [entry_addrs]
+            exit_addrs = [exit_addrs]
+            
         if self.rowcol_threads > entry_points:
             print(
                 "AIRA: The number of rowcol threads requested ({}) is larger than the number of input pixels ({})."
@@ -518,9 +549,14 @@ class Conv2DMaxPoolAira(AiraLayer):
             print("AIRA: Updated rowcol threads for layer {} to {} threads.".format(self.index, self.rowcol_threads))
 
         addr_incr = int(entry_points / self.rowcol_threads)
-        addrs = [entry_addrs[addr_incr * i] for i in range(self.rowcol_threads)] + [int(np.prod(shape_2d))]
 
-        return addrs[:-1], addrs[1:]
+        entry_ptrs = []
+        exit_ptrs  = []
+        for i in range(0, self.rowcol_threads * addr_incr, addr_incr):
+            entry_ptrs.append(entry_addrs[i])
+            exit_ptrs.append(exit_addrs[i+addr_incr-1] + 1)
+        
+        return entry_ptrs, exit_ptrs
             
     def compile_layer_header(self):
         """Compile the parameters for the model into the Verilog header.
@@ -545,4 +581,6 @@ class Conv2DMaxPoolAira(AiraLayer):
         output_str = output_str.replace("<entry_ptrs>", ','.join([str(x) for x in self.entry_ptrs]))
         output_str = output_str.replace("<exit_ptrs>", ','.join([str(x) for x in self.exit_ptrs]))
         
+        output_str = output_str.replace("<padding>", str(self.padding))
+
         return output_str

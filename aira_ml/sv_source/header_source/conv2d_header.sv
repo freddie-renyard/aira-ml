@@ -10,3 +10,4 @@ parameter N_THREAD_FILTER_<i> = <n_thread_filter>;
 parameter N_THREAD_ROWCOL_<i> = <n_thread_rowcol>;
 parameter integer ENTRY_PTRS_<i> [N_THREAD_ROWCOL_<i>-1:0] = '{<entry_ptrs>}; // Format: '{0, 40}; 
 parameter integer EXIT_PTRS_<i>  [N_THREAD_ROWCOL_<i>-1:0] = '{<exit_ptrs>}; // Format: '{0, 40}; 
+parameter PADDING_<i> = <padding>;
