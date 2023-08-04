@@ -3,6 +3,7 @@ import numpy as np
 from aira_ml.tools.aira_exceptions import AiraException
 from aira_ml.tools.binary_tools import BinCompiler
 from aira_ml.tools.file_tools import Filetools
+from aira_ml.tools.lut_compiler import compile_sigmoid
 from math import ceil, log2
 
 class AiraLayer:
@@ -16,7 +17,6 @@ class AiraLayer:
         # The parent class for other AiraML layers.
 
         self.index = index
-        self.act_name = self.check_act_fn_support(act_name)
 
         # Determine datapath parameters.
         self.weight_params = {
@@ -42,13 +42,16 @@ class AiraLayer:
             'n_overflow': n_overflow
         }
 
+        self.act_name = self.check_act_fn_support(act_name)
+
     def check_act_fn_support(self, act_name):
         # Checks the support for activation functions passed to the layer.
 
         if act_name == 'relu':
             return act_name
-        #if act_name == 'sigmoid':
-        #    return act_name
+        if act_name == 'sigmoid':
+            self.compile_sigmoid_lut()
+            return act_name
         else:
             raise AiraException("Unsupported function found in a Dense layer: {}".format(act_name))
 
@@ -56,7 +59,8 @@ class AiraLayer:
         # Calculates the nearest number of threads that can compute the operation specified.
         # Used for thread allocation.
 
-        if ops % threads != 0:
+        
+        if ops % threads == 0:
             return threads
 
         factors = set()
@@ -66,6 +70,10 @@ class AiraLayer:
         
         factors = list(factors)
         factors.sort()
+        
+        if len(factors) == 0:
+            factors = [1]
+        
         difs = [abs(threads - fac) for fac in factors]
         return factors[difs.index(min(difs))]
 
@@ -96,6 +104,8 @@ class AiraLayer:
 
         if self.act_name == 'relu':
             act_code = "1"
+        if self.act_name == 'sigmoid':
+            act_code = "2"
         else:
             act_code = "0"
         
@@ -116,6 +126,22 @@ class AiraLayer:
         """
         output_str = open("aira_ml/sv_source/{}_module.sv".format(self.layer_name)).read()
         return output_str.replace("<i>", str(self.index))
+
+    def compile_sigmoid_lut(self):
+        """Compile a sigmoid lookup table for use in activation functions.
+        """
+
+        lut = compile_sigmoid(
+            self.output_params['n_man'],
+            self.output_params['n_exp'],
+            bit_depth = 8
+        )
+
+        Filetools.save_to_file(
+            "sigmoid_lut_{}".format(self.index), 
+            lut, 
+            verbose=False
+        )
 
 class DenseAira(AiraLayer):
 
