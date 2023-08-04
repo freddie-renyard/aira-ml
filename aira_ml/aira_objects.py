@@ -42,6 +42,8 @@ class AiraLayer:
             'n_overflow': n_overflow
         }
 
+        self.lut_depth = 8
+
         self.act_name = self.check_act_fn_support(act_name)
 
     def check_act_fn_support(self, act_name):
@@ -102,6 +104,8 @@ class AiraLayer:
         output_str = output_str.replace("<n_overflow>", str(self.alu_params['n_overflow']))
         output_str = output_str.replace("<mult_extra>", str(self.alu_params['mult_extra']))
 
+        output_str = output_str.replace("<lut_depth>", str(self.lut_depth))
+
         if self.act_name == 'relu':
             act_code = "1"
         if self.act_name == 'sigmoid':
@@ -134,7 +138,7 @@ class AiraLayer:
         lut = compile_sigmoid(
             self.output_params['n_man'],
             self.output_params['n_exp'],
-            bit_depth = 8
+            bit_depth = self.lut_depth
         )
 
         Filetools.save_to_file(

@@ -4,11 +4,11 @@
     "mult_extra": 2,
     "n_overflow": 1,
 
-    "mantissa_growth": 1,
-    "exponent_growth": 1,
+    "mantissa_growth": 0,
+    "exponent_growth": 0,
 
     "starting_mantissa": 5,
     "starting_exponent": 5,
 
-    "threads": 4
+    "threads": 1
 }

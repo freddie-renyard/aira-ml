@@ -21,7 +21,7 @@ def mid_float_convert(bin_str, n_man):
         sign_val = -1
 
     exp_val = Bits(bin=exp).int - 4
-    
+    print(exp, exp_val)
     return sign_val * man_val * 2 ** exp_val
 
 def compile_sigmoid(n_mantissa_in, n_exp_in, bit_depth, n_output=0, dtype='float'):
@@ -42,8 +42,6 @@ def compile_sigmoid(n_mantissa_in, n_exp_in, bit_depth, n_output=0, dtype='float
     lut_res = 2 ** bit_depth
     max_res = 2 ** n_input
 
-    decim_fac = int(max_res / lut_res) # Decimate the table to save memory
-
     exp_limits = [4, -12] 
     exp_bits = ceil(log2(exp_limits[0] - exp_limits[1])) # Number of bits used to express the limited exponent range
     
@@ -55,6 +53,9 @@ def compile_sigmoid(n_mantissa_in, n_exp_in, bit_depth, n_output=0, dtype='float
     # Determine what value this binary actually represents under 
     # floating point interpretation.
     in_float_vals = [mid_float_convert(x, remaining_bits) for x in in_bin_str]
+
+    for x in zip(in_bin_str, in_float_vals):
+        print(x)
 
     # Compute the sigmoid value for each value.
     out_sigmoid_vals = [sigmoid(x) for x in in_float_vals]
