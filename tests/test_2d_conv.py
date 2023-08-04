@@ -21,8 +21,6 @@ print(np.shape(model.layers[0].get_weights()[0]))
 print("Bias: ", model.layers[0].get_weights()[1])
 print(inference)
 
-print(dir(inference))
-
 for i in range(np.shape(inference)[3]):
     total = 0
     print("First z conv: ", end=" ")

@@ -47,6 +47,8 @@ class AiraLayer:
 
         if act_name == 'relu':
             return act_name
+        #if act_name == 'sigmoid':
+        #    return act_name
         else:
             raise AiraException("Unsupported function found in a Dense layer: {}".format(act_name))
 
@@ -513,9 +515,6 @@ class Conv2DMaxPoolAira(AiraLayer):
             raise AiraException("Non-max pooling layers are not supported yet.")
             entry_mat = np.ones(shape_2d)
         
-        print(entry_mat)
-        print(exit_mat)
-
         lin_indices = np.reshape(entry_mat, np.prod(shape_2d), order="C") 
         entry_addrs = np.squeeze(np.where(lin_indices == 1))
         
@@ -528,7 +527,7 @@ class Conv2DMaxPoolAira(AiraLayer):
             entry_points = 1
             entry_addrs = [entry_addrs]
             exit_addrs = [exit_addrs]
-            
+
         if self.rowcol_threads > entry_points:
             print(
                 "AIRA: The number of rowcol threads requested ({}) is larger than the number of input pixels ({})."

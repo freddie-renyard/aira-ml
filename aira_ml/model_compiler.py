@@ -42,7 +42,8 @@ class ModelCompiler:
 
         index = 0
         for i, layer in enumerate(model.layers):
-            if 'dense' in layer.name:
+            layer_class = layer.__class__.__name__
+            if layer_class == 'Dense':
                 
                 if index == (layer_count - 1):
                     multithread = False
@@ -53,12 +54,13 @@ class ModelCompiler:
                 aira_sequential.append(dense_obj)
                 index += 1
 
-            elif 'flatten' in layer.name:
+            elif layer_class == 'Flatten':
                 cls.extract_flatten(layer)
-            elif 'conv2d' in layer.name:
+            elif layer_class == "Conv2D":
+                next_layer_class = model.layers[i+1].__class__.__name__
                 if len(model.layers[i:]) == 1:
                     max_pool = False
-                elif model.layers[i+1].name.find('max_pooling2d') != -1:
+                elif next_layer_class == "MaxPooling2D":
                     if model.layers[i+1].pool_size == (2, 2):
                         max_pool = True
                     else:
