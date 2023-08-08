@@ -19,6 +19,7 @@ N_OUTPUT_ADDR_<i> = $clog2(OUTPUT_LEN_<i>),
 
 N_OVERFLOW_<i> = <n_overflow>,
 MULT_EXTRA_<i> = <mult_extra>,
-ACT_FUNC_<i> = <act_code>;
+ACT_FUNC_<i> = <act_code>,
 
-LUT_DEPTH_<i> = <lut_depth>
+LUT_DEPTH_<i> = <lut_depth>;
+

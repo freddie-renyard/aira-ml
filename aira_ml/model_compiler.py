@@ -50,7 +50,20 @@ class ModelCompiler:
                 else:
                     multithread = True
 
-                dense_obj, prev_man, prev_exp = cls.extract_dense(layer, index, prev_man, prev_exp, multithreading=multithread)
+                if index != 0:
+                    input_ports = aira_sequential[-1].output_ports
+                else:
+                    input_ports = 1
+                    
+                dense_obj, prev_man, prev_exp = cls.extract_dense(
+                    layer, 
+                    index, 
+                    prev_man, 
+                    prev_exp, 
+                    multithreading=multithread,
+                    input_ports = input_ports
+                )
+
                 aira_sequential.append(dense_obj)
                 index += 1
 
@@ -100,7 +113,7 @@ class ModelCompiler:
         cls.call_synthesis_server()
 
     @classmethod
-    def extract_dense(cls, layer, index, n_in_mantissa, n_in_exponent, multithreading=False):
+    def extract_dense(cls, layer, index, n_in_mantissa, n_in_exponent, multithreading=False, input_ports=1):
         """This method compiles the data in a dense layer to a Dense
         Aira object.
         """
@@ -138,7 +151,8 @@ class ModelCompiler:
             n_output_exponent= out_exponent,
             n_overflow       = params["n_overflow"],
             mult_extra       = params["mult_extra"],
-            threads          = threads
+            threads          = threads,
+            input_ports      = input_ports
         )
 
         return dense_obj, out_mantissa, out_exponent

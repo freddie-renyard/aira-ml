@@ -19,7 +19,8 @@
         .POST_NEURON_NUM(OUTPUT_LEN_<i>),
         .THREADS(THREADS_<i>),
         .N_ADDR_DELTA(N_ADDR_DELTA_<i>),
-        .MEM_DEPTHS(MEM_DEPTHS_<i>)
+        .MEM_DEPTHS(MEM_DEPTHS_<i>),
+        .LUT_DEPTH(LUT_DEPTH_<i>)
     ) layer_<i> (
         .clk(clk),
         .rst(rst),

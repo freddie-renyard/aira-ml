@@ -42,7 +42,7 @@ class AiraLayer:
             'n_overflow': n_overflow
         }
 
-        self.lut_depth = 8
+        self.lut_depth = 2 ** 8
 
         self.act_name = self.check_act_fn_support(act_name)
 
@@ -138,7 +138,7 @@ class AiraLayer:
         lut = compile_sigmoid(
             self.output_params['n_man'],
             self.output_params['n_exp'],
-            bit_depth = self.lut_depth
+            lut_depth = self.lut_depth
         )
 
         Filetools.save_to_file(
@@ -153,7 +153,7 @@ class DenseAira(AiraLayer):
         n_input_mantissa, n_input_exponent,
         n_weight_mantissa, n_weight_exponent,
         n_output_mantissa, n_output_exponent,
-        n_overflow, mult_extra,
+        n_overflow, mult_extra, input_ports,
         threads):
 
         # Initialise the parent layer params
@@ -167,7 +167,7 @@ class DenseAira(AiraLayer):
         self.layer_name = 'dense'
 
         # Set the number of i/o ports
-        self.input_ports = 1
+        self.input_ports = input_ports
         self.output_ports = 1
 
         # Infer the number of neurons from the dimensionality of the weight matrix
@@ -359,13 +359,17 @@ class Conv2DMaxPoolAira(AiraLayer):
 
         # Determine tensor parameters for the convolution
         conv_tensor_shape       = np.shape(conv_layer.weights[0])
+        print(conv_tensor_shape)
         self.filter_num         = conv_tensor_shape[3]
         self.prelayer_channels  = conv_tensor_shape[2]
         self.kernel_dim         = conv_tensor_shape[0]
 
         # Determine input and output data entries
         self.input_len  = int(np.prod(conv_layer.input_shape[1:]))
-        self.output_len = int(np.prod(conv_layer.output_shape[1:]))
+        if max_pool_layer is not None:
+            self.output_len = int(np.prod(max_pool_layer.output_shape[1:]))
+        else:
+            self.output_len = int(np.prod(conv_layer.output_shape[1:]))
 
         # Determine input image shape
         self.input_shape = conv_layer.input_shape[1:]
@@ -392,6 +396,7 @@ class Conv2DMaxPoolAira(AiraLayer):
         # Set the number of i/o ports
         self.input_ports = self.prelayer_channels
         self.output_ports = self.filter_num
+        print(self.output_ports)
 
         # Determine the parallelisation parameters.
         self.filter_threads = filter_threads # The number of threads used to compute the filter

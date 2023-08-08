@@ -25,7 +25,8 @@ conv2d_top #(
         .ENTRY_PTRS(ENTRY_PTRS_<i>),
         .EXIT_PTRS(EXIT_PTRS_<i>),
         .MAX_POOL(MAX_POOL_<i>),
-        .PADDING(PADDING_<i>)
+        .PADDING(PADDING_<i>),
+        .LUT_DEPTH(LUT_DEPTH_<i>)
     ) layer_<i> (
 
         .clk(clk),
