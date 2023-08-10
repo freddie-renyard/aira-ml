@@ -1,14 +1,19 @@
 {
-    "weight_mantissa": 5,
-    "weight_exponent": 5,
+    "weight_mantissa": 9,
+    "weight_exponent": 6,
     "mult_extra": 2,
     "n_overflow": 1,
 
     "mantissa_growth": 0,
     "exponent_growth": 0,
 
-    "starting_mantissa": 5,
-    "starting_exponent": 5,
+    "starting_mantissa": 9,
+    "starting_exponent": 6,
 
-    "threads": 1
+    "thread_config": {
+        "conv2d_1": {
+            "filter_threads": 1,
+            "rowcol_threads": 3
+        }
+    }
 }

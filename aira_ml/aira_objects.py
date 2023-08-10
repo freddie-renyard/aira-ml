@@ -108,11 +108,11 @@ class AiraLayer:
 
         if self.act_name == 'relu':
             act_code = "1"
-        if self.act_name == 'sigmoid':
+        elif self.act_name == 'sigmoid':
             act_code = "2"
         else:
             act_code = "0"
-        
+
         output_str = output_str.replace("<act_code>", act_code)
 
         return output_str

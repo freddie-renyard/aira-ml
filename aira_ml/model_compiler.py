@@ -1,4 +1,5 @@
 from email.header import Header
+from math import prod
 import tensorflow as tf
 import numpy as np
 from matplotlib import pyplot as plt
@@ -54,7 +55,7 @@ class ModelCompiler:
                     input_ports = aira_sequential[-1].output_ports
                 else:
                     input_ports = 1
-                    
+
                 dense_obj, prev_man, prev_exp = cls.extract_dense(
                     layer, 
                     index, 
@@ -120,7 +121,7 @@ class ModelCompiler:
 
         weights, biases = layer.get_weights()
 
-        weights = MatrixTools.threshold_matrix(weights, threshold=0.05, verbose=True)
+        weights = MatrixTools.threshold_matrix(weights, threshold=0.0000001, verbose=True)
         #MatrixTools.plot_histogram(weights)
 
         # Get the compiler parameters
@@ -131,10 +132,7 @@ class ModelCompiler:
         out_mantissa = n_in_mantissa + params["mantissa_growth"]
         out_exponent = n_in_exponent + params["exponent_growth"]
 
-        if multithreading:
-            threads = params["threads"]
-        else:
-            threads = 1
+        threads = ModelCompiler.get_threading_params(layer.name, 1)
 
         # Create the Aira Dense object, which will compile the data to
         # the representations used in the FPGA.
@@ -171,23 +169,20 @@ class ModelCompiler:
             # TODO Transpose appropriately to bring the model weights into Aira's representation.
             raise AiraException("Only channels_last models are currently supported.")
         
-        filter_tensor = layer.weights[0]
-        bias_tensor = np.array(layer.bias)
-
         # Get the compiler parameters
         with open("aira_ml/config/compiler_config.json") as file:
             params = json.load(file)
 
+        filter_threads, rowcol_threads = ModelCompiler.get_threading_params(layer.name, 2)
+        
         # Determine the output depths
         out_mantissa = n_in_mantissa + params["mantissa_growth"]
         out_exponent = n_in_exponent + params["exponent_growth"]
 
         conv_obj = Conv2DMaxPoolAira(
             index           = index,
-            
             conv_layer      = layer,
             max_pool_layer  = max_pool_layer,
-
             n_input_mantissa= n_in_mantissa,
             n_input_exponent= n_in_exponent,
             n_weight_mantissa= params["weight_mantissa"],
@@ -197,8 +192,8 @@ class ModelCompiler:
             n_overflow       = params["n_overflow"],
             mult_extra       = params["mult_extra"],
             
-            filter_threads   = 1,
-            rowcol_threads   = 1,
+            filter_threads   = filter_threads,
+            rowcol_threads   = rowcol_threads,
             channel_threads  = None
         )
 
@@ -383,3 +378,32 @@ class ModelCompiler:
         files = glob.glob(cache_path)
         for f in files:
             os.remove(f)
+
+    @staticmethod
+    def get_threading_params(layer_name, param_len=1):
+
+        # Get the compiler parameters
+        with open("aira_ml/config/compiler_config.json") as file:
+            params = json.load(file)
+
+        def check_dict_name(dict, name, default_val=1):
+            if name in dict:
+                return dict[name]
+            else:
+                return default_val
+
+        if layer_name in params['thread_config']:
+            layer_params = params['thread_config'][layer_name]
+            ret_params = []
+            if layer_name.find('conv') != -1:
+                ret_params.append(check_dict_name(layer_params, 'filter_threads'))
+                ret_params.append(check_dict_name(layer_params, 'rowcol_threads'))
+            elif layer_name.find('dense') != -1:
+                ret_params.append(check_dict_name(layer_params, 'threads'))
+        else:
+            ret_params = [1 for _ in range(param_len)]
+
+        if param_len == 1:
+            return ret_params[0]
+        else:
+            return ret_params
