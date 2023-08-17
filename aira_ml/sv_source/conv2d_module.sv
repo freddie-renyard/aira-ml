@@ -24,6 +24,7 @@ conv2d_top #(
         .N_THREAD_FILTER(N_THREAD_FILTER_<i>),
         .ENTRY_PTRS(ENTRY_PTRS_<i>),
         .EXIT_PTRS(EXIT_PTRS_<i>),
+        .OUT_BASE_ADDRS(OUT_BASE_ADDRS_<i>),
         .MAX_POOL(MAX_POOL_<i>),
         .PADDING(PADDING_<i>),
         .LUT_DEPTH(LUT_DEPTH_<i>)

@@ -359,7 +359,6 @@ class Conv2DMaxPoolAira(AiraLayer):
 
         # Determine tensor parameters for the convolution
         conv_tensor_shape       = np.shape(conv_layer.weights[0])
-        print(conv_tensor_shape)
         self.filter_num         = conv_tensor_shape[3]
         self.prelayer_channels  = conv_tensor_shape[2]
         self.kernel_dim         = conv_tensor_shape[0]
@@ -396,7 +395,6 @@ class Conv2DMaxPoolAira(AiraLayer):
         # Set the number of i/o ports
         self.input_ports = self.prelayer_channels
         self.output_ports = self.filter_num
-        print(self.output_ports)
 
         # Determine the parallelisation parameters.
         self.filter_threads = filter_threads # The number of threads used to compute the filter
@@ -422,6 +420,12 @@ class Conv2DMaxPoolAira(AiraLayer):
             padding = 0
 
         self.entry_ptrs, self.exit_ptrs = self.compile_pointers(z_addr=self.z_addr, padding=padding)
+
+        # Compile thread output base addresses.
+        if max_pool_layer is not None:
+            self.out_base_addrs = self.compile_out_base_addrs(max_pool_layer, self.rowcol_threads)
+        else:
+            self.out_base_addrs = self.compile_out_base_addrs(conv_layer, self.rowcol_threads)
 
     def allocate_filters(self, filters):
         
@@ -516,13 +520,6 @@ class Conv2DMaxPoolAira(AiraLayer):
         
         shape_2d = (self.input_shape[0] + 2 * padding, self.input_shape[1] + 2 * padding)
 
-        # Check that the rowcol threads value is possible.
-        row_mod = False
-        col_mod = False
-        if z_addr:
-            row_mod = (shape_2d[0] % 2 != 0)
-            col_mod = (shape_2d[1] % 2 != 0)
-       
         entry_points = int(np.prod(shape_2d))
         
         if z_addr:
@@ -545,11 +542,10 @@ class Conv2DMaxPoolAira(AiraLayer):
             exit_mat = np.zeros(shape_2d, dtype=int)
             for coord in exit_coords:
                 exit_mat[coord[0], coord[1]] = 1
-            
         else:
             raise AiraException("Non-max pooling layers are not supported yet.")
             entry_mat = np.ones(shape_2d)
-        
+                
         lin_indices = np.reshape(entry_mat, np.prod(shape_2d), order="C") 
         entry_addrs = np.squeeze(np.where(lin_indices == 1))
         
@@ -591,7 +587,16 @@ class Conv2DMaxPoolAira(AiraLayer):
             exit_ptrs.append(exit_addrs[i+addr_incr-1] + 1)
         
         return entry_ptrs, exit_ptrs
-            
+    
+    def compile_out_base_addrs(self, layer, threads):
+
+        sq_shape = layer.output_shape[1:3]
+        print(sq_shape)
+        n_sq = np.prod(sq_shape)
+        offset = n_sq / threads
+
+        return [int(x * offset) for x in range(threads)]
+
     def compile_layer_header(self):
         """Compile the parameters for the model into the Verilog header.
         """
@@ -616,5 +621,7 @@ class Conv2DMaxPoolAira(AiraLayer):
         output_str = output_str.replace("<exit_ptrs>", ','.join([str(x) for x in self.exit_ptrs]))
         
         output_str = output_str.replace("<padding>", str(self.padding))
+
+        output_str = output_str.replace("<out_base_addrs>", ','.join([str(x) for x in self.out_base_addrs]))
 
         return output_str
