@@ -111,7 +111,7 @@ class ModelCompiler:
             output_shape = output_shape
         )
 
-        cls.call_synthesis_server()
+       # cls.call_synthesis_server()
 
     @classmethod
     def extract_dense(cls, layer, index, n_in_mantissa, n_in_exponent, multithreading=False, input_ports=1):

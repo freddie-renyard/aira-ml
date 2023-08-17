@@ -42,6 +42,12 @@ class AiraLayer:
             'n_overflow': n_overflow
         }
 
+        self.act_lookup = {
+            'none': "0",
+            'relu': "1",
+            'sigmoid': "2"
+        }
+
         self.lut_depth = 2 ** 8
 
         self.act_name = self.check_act_fn_support(act_name)
@@ -105,15 +111,7 @@ class AiraLayer:
         output_str = output_str.replace("<mult_extra>", str(self.alu_params['mult_extra']))
 
         output_str = output_str.replace("<lut_depth>", str(self.lut_depth))
-
-        if self.act_name == 'relu':
-            act_code = "1"
-        elif self.act_name == 'sigmoid':
-            act_code = "2"
-        else:
-            act_code = "0"
-
-        output_str = output_str.replace("<act_code>", act_code)
+        output_str = output_str.replace("<act_code>", self.act_lookup[self.act_name])
 
         return output_str
     
@@ -175,6 +173,7 @@ class DenseAira(AiraLayer):
         self.input_len = weight_dims[0]
         self.output_len = weight_dims[1]
 
+        # Ensure that the thread number is supported by the target.
         self.threads = self.modify_threads(self.output_len, threads)
 
         # Check that the weights are stored in a valid way.
@@ -197,34 +196,36 @@ class DenseAira(AiraLayer):
 
             self.mem_depths.append(len(compiled_weights))
         else:
-            # TODO Put this into a function.
+            self.compile_thread_data(index, weights, biases)
 
-            neurons_per_thread = self.output_len // self.threads
+    def compile_thread_data(self, index, weights, biases):
 
-            # Create an empty 3D numpy array with shape: 
-            # (number of threads, neurons_per_thread, pre neuron number)
-            interlaced_shape = (self.threads, neurons_per_thread, self.input_len)
-            weights_interlaced = np.zeros(interlaced_shape)
+        neurons_per_thread = self.output_len // self.threads
 
-            # Create an empty 2D numpy array for the interlaced biases.
-            biases_shape = (self.threads, neurons_per_thread)
-            biases_interlaced = np.zeros(biases_shape)
+        # Create an empty 3D numpy array with shape: 
+        # (number of threads, neurons_per_thread, pre neuron number)
+        interlaced_shape = (self.threads, neurons_per_thread, self.input_len)
+        weights_interlaced = np.zeros(interlaced_shape)
 
-            # Interlace the weight matrix into seperate matrices.
-            for i, data in enumerate(zip(weights, biases)):
-                weights_interlaced[i % self.threads][i // self.threads] = data[0]
-                biases_interlaced[i % self.threads][i // self.threads] = data[1]
+        # Create an empty 2D numpy array for the interlaced biases.
+        biases_shape = (self.threads, neurons_per_thread)
+        biases_interlaced = np.zeros(biases_shape)
 
-            # Compile the data. TODO Combine with above loop.
-            for thread_i, data in enumerate(zip(weights_interlaced, biases_interlaced)):
-                compiled_weights = self.compile_mem(data[0], data[1])
-                self.mem_depths.append(len(compiled_weights))
-                Filetools.save_to_file(
-                    "dense_weights_{}_thread_{}".format(index, thread_i), 
-                    self.compile_mem(data[0], data[1]), 
-                    verbose=False
-                )
+        # Interlace the weight matrix into seperate matrices.
+        for i, data in enumerate(zip(weights, biases)):
+            weights_interlaced[i % self.threads][i // self.threads] = data[0]
+            biases_interlaced[i % self.threads][i // self.threads] = data[1]
 
+        # Compile the data. TODO Combine with above loop.
+        for thread_i, data in enumerate(zip(weights_interlaced, biases_interlaced)):
+            compiled_weights = self.compile_mem(data[0], data[1])
+            self.mem_depths.append(len(compiled_weights))
+            Filetools.save_to_file(
+                "dense_weights_{}_thread_{}".format(index, thread_i), 
+                self.compile_mem(data[0], data[1]), 
+                verbose=False
+            )
+            
     def determine_mem_depth(self, weights):
         """Determine the biggest address change across a matrix.
         """
@@ -372,16 +373,18 @@ class Conv2DMaxPoolAira(AiraLayer):
 
         # Determine input image shape
         self.input_shape = conv_layer.input_shape[1:]
-
         self.max_pool = self.z_addr = (max_pool_layer is not None)
 
-        if conv_layer.padding == 'same':
-            self.padding = 1
-        elif conv_layer.padding == 'valid':
-            self.padding = 0
-        else:
-            raise AiraException("Convolution layers with padding of type {} are not currently supported.".format(conv_layer.padding))
+        padding_lookup = {
+            'same': 1,
+            'valid': 0
+        }
 
+        if conv_layer.padding not in padding_lookup.keys():
+            raise AiraException("Convolution layers with padding of type {} are not currently supported.".format(conv_layer.padding))
+        else:
+            self.padding = padding_lookup[conv_layer.padding]
+            
         self.z_addr = override_z_addr or self.z_addr
         
         # Check input layer strides
@@ -591,7 +594,6 @@ class Conv2DMaxPoolAira(AiraLayer):
     def compile_out_base_addrs(self, layer, threads):
 
         sq_shape = layer.output_shape[1:3]
-        print(sq_shape)
         n_sq = np.prod(sq_shape)
         offset = n_sq / threads
 
@@ -619,9 +621,8 @@ class Conv2DMaxPoolAira(AiraLayer):
 
         output_str = output_str.replace("<entry_ptrs>", ','.join([str(x) for x in self.entry_ptrs]))
         output_str = output_str.replace("<exit_ptrs>", ','.join([str(x) for x in self.exit_ptrs]))
-        
+    
         output_str = output_str.replace("<padding>", str(self.padding))
-
         output_str = output_str.replace("<out_base_addrs>", ','.join([str(x) for x in self.out_base_addrs]))
 
         return output_str
