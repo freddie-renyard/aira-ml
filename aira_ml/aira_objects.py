@@ -143,6 +143,9 @@ class AiraLayer:
             lut, 
             verbose=False
         )
+    
+    def report_finished(self):
+        print("AIRA: Layer {} ({}) compiled successfully.".format(self.index, self.layer_name))
 
 class DenseAira(AiraLayer):
 
@@ -196,6 +199,8 @@ class DenseAira(AiraLayer):
             self.mem_depths.append(len(compiled_weights))
         else:
             self.compile_thread_data(index, weights, biases)
+        
+        self.report_finished()
 
     def compile_thread_data(self, index, weights, biases):
 
@@ -431,6 +436,8 @@ class Conv2DMaxPoolAira(AiraLayer):
 
         # Compile thread address translation lookup table.
         self.compile_input_addr_lut()
+
+        self.report_finished()
     
     def compile_input_addr_lut(self):
         
@@ -438,7 +445,7 @@ class Conv2DMaxPoolAira(AiraLayer):
         n_row_padded = n_row
         if self.padding:
             n_row_padded += 2 * int(self.kernel_dim / 2)
-        print(n_row_padded)
+
         n_img = np.prod(self.input_shape)
 
         lut     = np.zeros(n_img)

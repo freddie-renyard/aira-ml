@@ -1,4 +1,3 @@
-from email.header import Header
 from math import prod
 import tensorflow as tf
 import numpy as np
@@ -121,7 +120,7 @@ class ModelCompiler:
 
         weights, biases = layer.get_weights()
 
-        weights = MatrixTools.threshold_matrix(weights, threshold=0.0000001, verbose=True)
+        weights = MatrixTools.threshold_matrix(weights, index, threshold=0.0000001, verbose=True)
         #MatrixTools.plot_histogram(weights)
 
         # Get the compiler parameters
@@ -266,6 +265,8 @@ class ModelCompiler:
 
         with open("aira_ml/cache/aira_ml_top.sv", "w") as output_file:
             output_file.write(aira_ml_top)
+
+        print("AIRA: SystemVerilog top-level module compiled successfully.")
 
     @classmethod
     def compile_connections(cls, aira_sequential):

@@ -63,7 +63,7 @@ class MatrixTools:
         return np.array(matrix * bin_matrix, dtype=float)
 
     @staticmethod
-    def threshold_matrix(matrix, threshold=0.01, verbose=False):
+    def threshold_matrix(matrix, layer_i, threshold=0.01, verbose=False):
         """Prune the matrix using a specified threshold.
         """
 
@@ -72,8 +72,10 @@ class MatrixTools:
         if verbose:
             matrix_val_num = np.product(np.shape(matrix))
             density = np.sum(bin_matrix) / matrix_val_num
+
+            density_perc = density * 100
             
-            print("Matrix Density: {}".format(density))
+            print("AIRA: Layer {} matrix density - {:.1f}%".format(layer_i, density_perc))
 
         return np.array(matrix * bin_matrix, dtype=float)
         
