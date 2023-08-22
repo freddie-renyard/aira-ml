@@ -349,11 +349,11 @@ class ModelCompiler:
             file.write(obj)
 
     @staticmethod
-    def call_synthesis_server():
-        """Transfers the contents of the cache to the synthesis server.
+    def run_vivado():
+        """Transfers the contents of the cache to the synthesis project and runs vivado.
         """
 
-        print("AIRA: Uploading data to server...")
+        print("AIRA: Calling Vivado to build project...")
 
         with open("aira_ml/config/server_config.json") as file:
             server_config = json.load(file)
@@ -366,11 +366,10 @@ class ModelCompiler:
         project_path = server_config["project_loc"]
 
         bitstream_path = server_config["bitstream_loc"]
-        script_path = cwd + "/aira_ml/file_transfer.sh {} {} {} {} {}"
+        script_path = cwd + "/aira_ml/run_vivado.sh {} {} {} {} {}"
 
         check_call(script_path.format(
             server_path, 
-            server_addr, 
             vivado_loc, 
             project_path,
             bitstream_path

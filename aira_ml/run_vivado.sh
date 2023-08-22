@@ -3,11 +3,14 @@
 # 1st argument - path to Vivado executable
 # 2nd argument - path to project file (.xpr)
 
+echo "Transferring files..."
+cp ./aira_ml/cache/ $1
+
 echo "Attempting Vivado run..."
-source $1
+source $2
 
 # Start vivado, passing the project filepath as an argument.
-vivado -mode tcl -tclargs $2
+vivado -mode tcl -tclargs $3
 
 set filepath [lindex $argv 0]
 open_project $filepath
