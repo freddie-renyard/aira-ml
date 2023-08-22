@@ -14,7 +14,7 @@ if __name__ == "__main__":
 
     server_fp = "./aira_ml/config/server_config.json"
     if not os.path.isfile(server_fp):
-        with open("server_config.json", "w+") as file:
+        with open("aira_ml/config/server_config.json", "w+") as file:
             json.dump({
                 "project_dir": "",
                 "vivado_loc": "",
