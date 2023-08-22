@@ -347,7 +347,7 @@ class ModelCompiler:
         with open("aira_ml/cache/serial_params.json", "w") as file:
             obj = json.dumps(json_dict, indent=2)
             file.write(obj)
-
+        
     @staticmethod
     def run_vivado():
         """Transfers the contents of the cache to the synthesis project and runs vivado.
@@ -361,12 +361,11 @@ class ModelCompiler:
         cwd = os.getcwd()
 
         server_path = server_config["project_dir"]
-        server_addr = server_config["ssh_addr"]
         vivado_loc = server_config["vivado_loc"]
         project_path = server_config["project_loc"]
-
         bitstream_path = server_config["bitstream_loc"]
-        script_path = cwd + "/aira_ml/run_vivado.sh {} {} {} {} {}"
+
+        script_path = cwd + "/aira_ml/run_vivado.sh {} {} {} {}"
 
         check_call(script_path.format(
             server_path, 

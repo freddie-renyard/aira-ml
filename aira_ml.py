@@ -24,3 +24,4 @@ if __name__ == "__main__":
         raise AiraException("AIRA: Warning - server not configured. Please enter configuration details in {}".format(server_fp))
 
     ModelCompiler.compile_tf_model(args.file)
+    ModelCompiler.run_vivado()

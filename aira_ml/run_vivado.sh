@@ -4,7 +4,7 @@
 # 2nd argument - path to project file (.xpr)
 
 echo "Transferring files..."
-cp ./aira_ml/cache/ $1
+cp -r ./aira_ml/cache/ $1
 
 echo "Attempting Vivado run..."
 source $2
@@ -14,6 +14,7 @@ vivado -mode tcl -tclargs $3
 
 set filepath [lindex $argv 0]
 open_project $filepath
+add_files $1
 reset_run synth_1
 launch_runs synth_1 -jobs 8
 wait_on_run synth_1
