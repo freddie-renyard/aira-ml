@@ -1,4 +1,3 @@
-from turtle import shape
 import numpy as np
 from aira_ml.tools.aira_exceptions import AiraException
 from aira_ml.tools.binary_tools import BinCompiler

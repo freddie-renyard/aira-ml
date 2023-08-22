@@ -1,4 +1,3 @@
-from cgi import test
 from aira_ml.serial_link import SerialLink
 import numpy as np
 import tensorflow as tf
@@ -156,7 +155,7 @@ if __name__ == "__main__":
         check_call(script_path, shell=True)
 
     evaluate_inference(trials, show_img=False)
-    
+
     try:
         pass
     except:
