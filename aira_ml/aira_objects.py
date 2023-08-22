@@ -430,6 +430,40 @@ class Conv2DMaxPoolAira(AiraLayer):
         else:
             self.out_base_addrs = self.compile_out_base_addrs(conv_layer, self.rowcol_threads)
 
+        # Compile thread address translation lookup table.
+        self.compile_input_addr_lut()
+    
+    def compile_input_addr_lut(self):
+        
+        n_row = self.input_shape[0]
+        n_row_padded = n_row
+        if self.padding:
+            n_row_padded += 2 * int(self.kernel_dim / 2)
+        print(n_row_padded)
+        n_img = np.prod(self.input_shape)
+
+        lut     = np.zeros(n_img)
+        lut[0]  = n_row_padded + int(self.kernel_dim / 2)
+
+        row_ctr = 0
+        for i in range(1, np.prod(n_img)):
+            if i % n_row == 0:
+                row_ctr = 0
+                lut[i] = lut[i-1] + 2 * int(self.kernel_dim / 2) + 1
+            else:
+                row_ctr += 1
+                lut[i] = lut[i-1] + 1
+
+        # Compile LUT to unsigned binary
+        
+        int_dat = [BinCompiler.compile_to_uint(x, ceil(log2(self.input_len)), 0) for x in lut]
+
+        Filetools.save_to_file(
+            "conv2dmaxpool_{}_addr_lut".format(self.index), 
+            int_dat, 
+            verbose=False
+        )
+
     def allocate_filters(self, filters):
         
         # Flatten kernels into 1D representations.

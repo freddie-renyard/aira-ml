@@ -300,11 +300,12 @@ class ModelCompiler:
 
     @staticmethod
     def compile_serial_params(n_input, n_output, 
-        input_num, output_num, 
-        in_format, out_format,
-        n_in_man, n_in_exp,
-        n_out_man, n_out_exp,
-        output_shape):
+            input_num, output_num, 
+            in_format, out_format,
+            n_in_man, n_in_exp,
+            n_out_man, n_out_exp,
+            output_shape
+        ):
         """Compiles the parameters needed to run the serial interface.
         Nothing is returned; a JSON file is saved to the cache.
         """
@@ -337,8 +338,14 @@ class ModelCompiler:
 
         json_dict["output_tensor_shape"] = output_shape
 
+        with open("aira_ml/config/serial_config.json", "r") as file:
+            params = json.load(file)
+
+        json_dict.update(params)
+
         with open("aira_ml/cache/serial_params.json", "w") as file:
-            json.dump(json_dict, file)
+            obj = json.dumps(json_dict, indent=2)
+            file.write(obj)
 
     @staticmethod
     def call_synthesis_server():

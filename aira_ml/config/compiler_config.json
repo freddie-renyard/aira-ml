@@ -12,12 +12,15 @@
 
     "thread_config": {
         "conv2d_1": {
-            "filter_threads": 2,
-            "rowcol_threads": 9
+            "filter_threads": 1,
+            "rowcol_threads": 1
         },
         "conv2d_2": {
             "filter_threads": 1,
-            "rowcol_threads": 2
+            "rowcol_threads": 1
+        },
+        "dense1": {
+            "threads": 1
         }
     }
 }

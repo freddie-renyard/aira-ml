@@ -1,18 +1,19 @@
 from cgi import test
-from timeit import repeat
-from tokenize import Triple
 from aira_ml.serial_link import SerialLink
 import numpy as np
+import tensorflow as tf
 from tensorflow.keras.datasets import mnist
 from matplotlib import pyplot as plt
 from tensorflow.keras.models import load_model
 from tensorflow.keras import Model
 from aira_ml.tools.binary_tools import BinCompiler
 import time
+import pickle 
 
 import os
 from subprocess import check_call
 
+flash_fpga = False
 
 def send_image_internal():
     """ Input an image into the serial link and decode it to
@@ -58,17 +59,23 @@ def compute_mse(arr_1, arr_2):
 
     return np.sum(output) / np.shape(output)[0]
 
-def evaluate_inference(trials, show_img=False):
+def load_phy_data():
 
-    print("\nDELTA: Testing MNIST inference...\n")
+    filename = "tests/phy_tests/HH4B_testing.pickle"
+    f = open(filename, 'rb')
+    data = pickle.load(f)
+
+    return (0, 0), (data['events'], data['labels'])
+
+def evaluate_inference(trials, show_img=False):
     
     # Load the actual ML model
-    path_to_model = "models/dense_mnist/model"
+    path_to_model = "models/phy_model"
     model = load_model(path_to_model)
 
     # Load testing data
-    (_, _), (x_test, y_test) = mnist.load_data()
-
+    (_, _), (x_test, y_test) = load_phy_data() #mnist.load_data()
+    
     link = SerialLink()
 
     aira_correct = 0
@@ -76,9 +83,8 @@ def evaluate_inference(trials, show_img=False):
     concordance = 0
 
     for i in range(trials):
-
-        # Normalise input image.
-        test_data = (x_test[i:i+1] / 256.0) + np.expand_dims(np.random.rand(28,28), axis=0)*0
+        
+        test_data = x_test[i][tf.newaxis, :]
 
         # Compute Tensorflow output.
         tf_inference = model.predict(test_data)
@@ -95,8 +101,8 @@ def evaluate_inference(trials, show_img=False):
             plt.show()
 
         actual_number = y_test[i]
-        tf_number = int(np.argmax(tf_inference))
-        aira_number = int(np.argmax(aira_inference))
+        tf_number = tf_inference #int(np.argmax(tf_inference))
+        aira_number = aira_inference #int(np.argmax(aira_inference))
 
         if tf_number == actual_number:
             tf_correct += 1
@@ -140,15 +146,19 @@ def evaluate_uart_speed(trials):
 
 if __name__ == "__main__":
 
-    print("\nDELTA: Loading the configuration file onto the FPGA...\n")
+    trials = 1000
+    
+    if flash_fpga:
+        # Load the bitstream file onto the FPGA.
+        print("\nDELTA: Loading the configuration file onto the FPGA...\n")
+        cwd = os.getcwd()
+        script_path = cwd + "/aira_ml/fpga_load.sh"
+        check_call(script_path, shell=True)
 
-    # Load the bitstream file onto the FPGA.
-    cwd = os.getcwd()
-    script_path = cwd + "/aira_ml/fpga_load.sh"
-    check_call(script_path, shell=True)
-
+    evaluate_inference(trials, show_img=False)
+    
     try:
-        evaluate_inference(10, show_img=True)
+        pass
     except:
         while True:
             try:
@@ -156,5 +166,7 @@ if __name__ == "__main__":
                 break
             except:
                 print("FPGA not found.")
+
+            time.sleep(1)
                 
-        evaluate_inference(10, show_img=True)
+            evaluate_inference(trials, show_img=False)

@@ -48,9 +48,6 @@ class SerialLink:
         self.code_data_in = self.get_format_code(params["input_format"])
         self.code_data_out = self.get_format_code(params["output_format"])
 
-        with open("aira_ml/config/serial_config.json") as file:
-            params = json.load(file)
-
         self.baud = params["baud_rate"]
         self.port_name = params["serial_port"]
 
@@ -122,6 +119,7 @@ class SerialLink:
                 self.tx_bin_str(bin_val)
                 
         elif self.in_format_code == 1:
+            bytes_wr = 0
             for value in flat_tensor:
                 bin_val = BinCompiler.compile_to_float(
                     value,
@@ -130,6 +128,7 @@ class SerialLink:
                 )
 
                 self.tx_bin_str(bin_val)
+                bytes_wr += int(len(bin_val) / 8)
 
     def tx_bin_str(self, tx_str):
         """Write bits to the serial port.
@@ -139,6 +138,7 @@ class SerialLink:
         zero_padding = "0" * self.tx_zero_pad
         
         tx_data = Bits(bin = zero_padding + tx_str)
+
         try:
             self.serial_link.write(tx_data.bytes)
         except:
@@ -148,7 +148,7 @@ class SerialLink:
         """Receive data from the FPGA over the serial port.
         Returns the model's output tensor.
         """
-
+        
         rx_bytes = self.reader.readline(self.bytes_to_rx)
         rx_data = BitArray(bytes=rx_bytes).bin
 
@@ -175,9 +175,7 @@ class SerialLink:
     def get_inference(self, tensor):
         """Send data to the FPGA and await a response.
         """
-
         self.send_data(tensor)
-
         return self.receive_data()
 
     def get_format_code(self, format_str):
