@@ -360,7 +360,7 @@ class Conv2DMaxPoolAira(AiraLayer):
             n_overflow, mult_extra
         )
 
-        self.layer_name = 'conv2D'
+        self.layer_name = 'conv2d'
 
         # Determine tensor parameters for the convolution
         conv_tensor_shape       = np.shape(conv_layer.weights[0])
