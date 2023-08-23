@@ -7,5 +7,5 @@ echo "AIRA: Attempting Vivado run..."
 source $2
 
 # Start vivado, passing the project filepath as an argument.
-vivado -mode tcl -source ./aira_ml/build_aira.tcl -tclargs $3 ./aira_ml/cache $4
+vivado -mode tcl -source ./aira_ml/build_aira.tcl -tclargs $3 ./aira_ml/cache $4 $5
 

@@ -15,8 +15,8 @@ wait_on_run impl_1
 open_hw_manager
 connect_hw_server -allow_non_jtag
 open_hw_target
-current_hw_device [get_hw_devices xc7k325t_0] # TODO Generalise this.
-refresh_hw_device -update_hw_probes false [lindex [get_hw_devices xc7k325t_0]]
+current_hw_device [get_hw_devices [lindex $argv 3]]
+refresh_hw_device -update_hw_probes false [lindex [get_hw_devices [lindex $argv 3]]]
 set_property PROGRAM.FILE {[lindex $argv 2]}
 
 exit 

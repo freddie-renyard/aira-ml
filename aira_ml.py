@@ -19,7 +19,8 @@ if __name__ == "__main__":
                 "project_dir": "",
                 "vivado_loc": "",
                 "project_loc": "",
-                "bitstream_loc": ""
+                "bitstream_loc": "",
+                "device_name": ""
             }, file)
         raise AiraException("AIRA: Warning - server not configured. Please enter configuration details in {}".format(server_fp))
 
