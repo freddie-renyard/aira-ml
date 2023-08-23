@@ -365,7 +365,7 @@ class ModelCompiler:
         project_path = server_config["project_loc"]
         bitstream_path = server_config["bitstream_loc"]
         device_name = server_config["device_name"]
-        script_path = cwd + "/aira_ml/run_vivado.sh {} {} {} {}"
+        script_path = cwd + "/aira_ml/run_vivado.sh {} {} {} {} {}"
 
         check_call(script_path.format(
             server_path, 
