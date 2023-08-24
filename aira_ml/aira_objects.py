@@ -461,8 +461,8 @@ class Conv2DMaxPoolAira(AiraLayer):
                 lut[i] = lut[i-1] + 1
 
         # Compile LUT to unsigned binary
-        
-        int_dat = [BinCompiler.compile_to_uint(x, ceil(log2(self.input_len)), 0) for x in lut]
+        print(lut)
+        int_dat = [BinCompiler.compile_to_uint(x, ceil(log2(self.input_len))+1, 0) for x in lut]
 
         Filetools.save_to_file(
             "conv2dmaxpool_{}_addr_lut".format(self.index), 

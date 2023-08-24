@@ -11,6 +11,7 @@ class BinCompiler:
         """
 
         scale_factor = 2 ** n_radix
+        
         scaled_val = round(abs(value) * scale_factor)
 
         # Ensure that the 1 * scale factor are handled when radix is 
