@@ -73,7 +73,7 @@ def evaluate_inference(trials, show_img=False):
     model = load_model(path_to_model)
 
     # Load testing data
-    (_, _), (x_test, y_test) = mnist.load_data() # load_phy_data()
+    (_, _), (x_test, y_test) = load_phy_data() # mnist.load_data()
     
     link = SerialLink()
 
@@ -102,13 +102,6 @@ def evaluate_inference(trials, show_img=False):
         actual_number = y_test[i]
         tf_number = tf_inference #int(np.argmax(tf_inference))
         aira_number = aira_inference #int(np.argmax(aira_inference))
-
-        if tf_number == actual_number:
-            tf_correct += 1
-        if aira_number == actual_number:
-            aira_correct += 1
-        if aira_number == tf_number:
-            concordance += 1
         
         print(
             "TRIAL {} Actual Output {} FPGA {} TensorFlow {} MSE: {}"

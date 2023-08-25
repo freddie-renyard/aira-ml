@@ -176,6 +176,11 @@ class DenseAira(AiraLayer):
         self.output_len = weight_dims[1]
 
         # Ensure that the thread number is supported by the target.
+        if threads == -1:
+            threads = self.output_len
+        elif type(threads) == float:
+            threads = int(self.output_len * threads)
+        
         self.threads = self.modify_threads(self.output_len, threads)
 
         # Check that the weights are stored in a valid way.
@@ -403,9 +408,26 @@ class Conv2DMaxPoolAira(AiraLayer):
         self.input_ports = self.prelayer_channels
         self.output_ports = self.filter_num
 
+        if self.padding:
+            padding = (int(self.kernel_dim / 2))
+        else:
+            padding = 0
+
         # Determine the parallelisation parameters.
-        self.filter_threads = filter_threads # The number of threads used to compute the filter
-        self.rowcol_threads = rowcol_threads # The number of threads used within each convolution on an image
+        if filter_threads == -1:
+            self.filter_threads = self.filter_num
+        elif type(filter_threads) == float:
+            self.filter_threads = int(filter_threads * self.filter_num)
+        else:
+            self.filter_threads = filter_threads # The number of threads used to compute the filter
+        
+        entry_addrs, _ = self.compile_entry_addrs(z_addr=self.z_addr, padding=padding)
+        if rowcol_threads == -1:
+            self.rowcol_threads = len(entry_addrs)
+        elif type(rowcol_threads) == float:
+            self.rowcol_threads = int(len(entry_addrs) * rowcol_threads)
+        else:
+            self.rowcol_threads = rowcol_threads # The number of threads used within each convolution on an image
         
         if channel_threads is not None:
             if channel_threads != self.prelayer_channels:
@@ -419,12 +441,6 @@ class Conv2DMaxPoolAira(AiraLayer):
 
         # Compile biases. 
         self.allocate_and_compile_biases(np.array(conv_layer.bias))
-
-        # Compile entry and exit pointers.
-        if self.padding:
-            padding = (int(self.kernel_dim / 2))
-        else:
-            padding = 0
 
         self.entry_ptrs, self.exit_ptrs = self.compile_pointers(z_addr=self.z_addr, padding=padding)
 
@@ -557,12 +573,10 @@ class Conv2DMaxPoolAira(AiraLayer):
                 verbose=False
             )
 
-    def compile_pointers(self, z_addr=True, padding=0):
+    def compile_entry_addrs(self, z_addr=True, padding=0):
         # Compiles the entry pointers for the rowcol threads.
-        
-        shape_2d = (self.input_shape[0] + 2 * padding, self.input_shape[1] + 2 * padding)
 
-        entry_points = int(np.prod(shape_2d))
+        shape_2d = (self.input_shape[0] + 2 * padding, self.input_shape[1] + 2 * padding)
         
         if z_addr:
             entry_mat = np.indices(shape_2d) % 2 == 0
@@ -588,13 +602,19 @@ class Conv2DMaxPoolAira(AiraLayer):
         else:
             raise AiraException("Non-max pooling layers are not supported yet.")
             entry_mat = np.ones(shape_2d)
-                
+        
         lin_indices = np.reshape(entry_mat, np.prod(shape_2d), order="C") 
         entry_addrs = np.squeeze(np.where(lin_indices == 1))
         
         lin_indices = np.reshape(exit_mat, np.prod(shape_2d), order="C") 
         exit_addrs = np.squeeze(np.where(lin_indices == 1))
 
+        return entry_addrs, exit_addrs
+
+    def compile_pointers(self, z_addr=True, padding=0):
+        
+        entry_addrs, exit_addrs = self.compile_entry_addrs(z_addr=z_addr, padding=padding)
+        
         try:
             entry_points = len(entry_addrs)
         except:
