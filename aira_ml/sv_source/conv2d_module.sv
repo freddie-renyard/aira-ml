@@ -14,6 +14,7 @@ conv2d_top #(
         .N_OUTPUT_PORTS(N_OUTPUT_PORTS_<i>),
         .N_INPUT_ADDR(N_INPUT_ADDR_<i>),
         .N_OUTPUT_ADDR(N_OUTPUT_ADDR_<i>),
+        .OUTPUT_LEN(OUTPUT_LEN_<i>),
         .N_CHAN(N_CHAN_<i>),
         .N_THREAD_CHAN(N_THREAD_CHAN_<i>),
         .N_FILTER(N_FILTER_<i>),

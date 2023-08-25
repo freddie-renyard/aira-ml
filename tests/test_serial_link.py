@@ -73,7 +73,7 @@ def evaluate_inference(trials, show_img=False):
     model = load_model(path_to_model)
 
     # Load testing data
-    (_, _), (x_test, y_test) = load_phy_data() #mnist.load_data()
+    (_, _), (x_test, y_test) = mnist.load_data() # load_phy_data()
     
     link = SerialLink()
 
@@ -85,11 +85,11 @@ def evaluate_inference(trials, show_img=False):
         
         test_data = x_test[i][tf.newaxis, :]
 
-        # Compute Tensorflow output.
-        tf_inference = model.predict(test_data)
-
         # Get inference from the FPGA.
         aira_inference = link.get_inference(test_data)
+
+        # Compute Tensorflow output.
+        tf_inference = model.predict(test_data)
 
         # Threshold the floating point errors
         aira_inference = aira_inference * (aira_inference > (10**-8))

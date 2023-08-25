@@ -461,7 +461,6 @@ class Conv2DMaxPoolAira(AiraLayer):
                 lut[i] = lut[i-1] + 1
 
         # Compile LUT to unsigned binary
-        print(lut)
         int_dat = [BinCompiler.compile_to_uint(x, ceil(log2(self.input_len))+1, 0) for x in lut]
 
         Filetools.save_to_file(
@@ -583,6 +582,7 @@ class Conv2DMaxPoolAira(AiraLayer):
             exit_coords  = [[x + self.kernel_dim, y + self.kernel_dim] for x, y in entry_coords]
 
             exit_mat = np.zeros(shape_2d, dtype=int)
+            
             for coord in exit_coords:
                 exit_mat[coord[0], coord[1]] = 1
         else:

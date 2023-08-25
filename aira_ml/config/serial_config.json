@@ -1,5 +1,5 @@
 {
-    "baud_rate": 3000000,
+    "baud_rate": 2000000,
     "code_data_in": "11111111", 
     "code_data_out": "11111111",
     "serial_port": "/dev/tty.usbserial-A904DPPI"

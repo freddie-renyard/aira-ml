@@ -149,6 +149,7 @@ class SerialLink:
         Returns the model's output tensor.
         """
         
+        print(self.serial_link.in_waiting)
         rx_bytes = self.reader.readline(self.bytes_to_rx)
         rx_data = BitArray(bytes=rx_bytes).bin
 

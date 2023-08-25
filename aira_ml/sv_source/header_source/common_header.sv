@@ -16,7 +16,6 @@ N_OUTPUT_<i> = <n_output>,
 N_OUTPUT_PORTS_<i> = <n_output_ports>,
 OUTPUT_LEN_<i> = <output_len>,
 N_OUTPUT_ADDR_<i> = $clog2(OUTPUT_LEN_<i>),
-
 N_OVERFLOW_<i> = <n_overflow>,
 MULT_EXTRA_<i> = <mult_extra>,
 ACT_FUNC_<i> = <act_code>,
