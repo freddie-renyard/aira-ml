@@ -2,6 +2,7 @@
 
 # Add Aira build to vivado project
 open_project [lindex $argv 0]
+remove_files [lindex] $argv 1]
 add_files [lindex $argv 1]
 
 # Synthesise and implemnent hardware design
