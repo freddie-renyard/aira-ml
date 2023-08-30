@@ -148,7 +148,7 @@ class SerialLink:
         """Receive data from the FPGA over the serial port.
         Returns the model's output tensor.
         """
-        
+
         rx_bytes = self.reader.readline(self.bytes_to_rx)
         rx_data = BitArray(bytes=rx_bytes).bin
 

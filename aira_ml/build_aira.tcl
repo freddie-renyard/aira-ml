@@ -2,8 +2,15 @@
 
 # Add Aira build to vivado project
 open_project [lindex $argv 0]
-remove_files [lindex $argv 1]
-add_files [lindex $argv 1]
+
+cd aira_ml/cache
+set source_files [exec ls]
+
+foreach file $source_files {
+    puts $file
+    remove_files $file
+    add_files $file
+}
 
 # Synthesise and implemnent hardware design
 reset_run synth_1
