@@ -8,7 +8,9 @@ A repository for the development of a compiler which compiles machine learning m
 
 The following command can be used to build networks with Aira:
 
-`python aira_ml.py -f /model/dense_mnist`
+```bash
+python aira_ml.py -f /model/dense_mnist
+```
 
 where -f is the path to the target model.
 
@@ -18,15 +20,19 @@ Aira requires a working installation of TensorFlow to inspect models, and Vivado
 
 1. Clone this repository and `cd` into the aira-ml directory.
 
-`https://github.com/freddie-renyard/aira-ml.git`
-`cd aira-ml`
+```bash
+https://github.com/freddie-renyard/aira-ml.git
+cd aira-ml
+```
 
 2. Before building a network, the tools must be configured with the locations of the FPGA project. This can be found in the `aira-ml/aira_ml/config/server_config.json` file. The required fields are listed below:
 
-- `vivado_loc`: The location of the Vivado `settings64.sh` setup file.
-- `project_loc`: The location of the Vivado Aira project file, `aira_project.xpr`.
-- `bitstream_loc`: The location of the implemented bitstream output. This will be in the `*.runs/impl_1/` directory within the Aira project file.
-- `device_name`: The name of the FPGA within Vivado. E.g. for Digilent's Genesys 2 board, this could be the `xc7k325t_0` board.
+| Field | Description |
+| --- | ----------- |
+| `vivado_loc` | The location of the Vivado `settings64.sh` setup file. |
+| `project_loc` | The location of the Vivado Aira project file, `aira_project.xpr`. |
+| `bitstream_loc` | The location of the implemented bitstream output. This will be in the `*.runs/impl_1/` directory within the Aira project file. |
+| `device_name` | The name of the FPGA within Vivado. E.g. for Digilent's Genesys 2 board, this could be the `xc7k325t_0` board. |
 
 ## Supported Networks
 
