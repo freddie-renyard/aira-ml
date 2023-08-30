@@ -14,7 +14,11 @@ python aira_ml.py -f /model/dense_mnist
 
 where -f is the path to the target model.
 
-## Installation and Usage
+## Requirements
+
+In addition to the code in this repository, an Aira project that has been customised to the target platform is needed. Please open an issue on this repository for more information.
+
+## Installation and Setup
 
 Aira requires a working installation of TensorFlow to inspect models, and Vivado to build the FPGA firmware. Other FPGA toolchains can be used to build the SystemVerilog output, but Vivado is currently built in to Aira's end-to-end workflow.
 
@@ -49,7 +53,7 @@ Aira can efficiently parallelise different portions of the computation needed to
 - Conv2D
     - `filter_threads`: parellises the evaluation of each kernel within a filter.
     - `rowcol_threads`: parellises the evaluation of the input image.
-    - Evaluation of the channels of an image is parellised by default. 
+    - NB: evaluation of the channels of an image is parellised by default. 
 
 Each thread will evaluate an equal proportion of the work of each layer. For instance, in a Dense layer with 64 neurons and 2 threads, each thread will evaluate 32 neurons.
 
@@ -110,8 +114,8 @@ The following JSON could be used:
 
 This would result in:
 
-- The first layer (`conv2d`) having 6 filter threads and 4 rowcol threads.
-- The sixth layer (`dense`) having 64 threads.
+- The first layer `conv2d` having 6 filter threads and 4 rowcol threads.
+- The sixth layer `dense` having 64 threads.
 - All other layers having 1 thread.
 
 ## Supported Networks
@@ -134,5 +138,5 @@ At present Sequential TensorFlow models are supported by Aira. Currently the fol
 - Supported activation functions:
     - ReLU
     - Sigmoid
-    - None (y = x)
+    - None `y = x`
 
